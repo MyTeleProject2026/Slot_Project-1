@@ -1,0 +1,9 @@
+# Dockerfile for frontend-admin (minimal)
+FROM node:18-alpine
+WORKDIR /app
+COPY frontend-admin/package.json ./
+RUN npm install --production
+COPY frontend-admin/ ./frontend-admin/
+WORKDIR /app/frontend-admin
+EXPOSE 5173
+CMD ["npm", "run", "start"]

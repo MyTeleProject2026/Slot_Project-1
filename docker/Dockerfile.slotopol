@@ -1,0 +1,7 @@
+# Dockerfile for slotopol (placeholder)
+FROM golang:1.20-alpine
+WORKDIR /app
+COPY slotopol-server/ ./slotopol-server/
+WORKDIR /app/slotopol-server
+RUN true
+CMD ["/bin/sh", "-c", "echo Slotopol placeholder"]

@@ -2,9 +2,7 @@
 
 Scaffolded repository for Slot_Project-1. This branch adds the project folder structure and placeholder files to get started.
 
-Quick start (using Docker Compose):
+Quick start:
+1. Review placeholder files and replace with implementations.
+2. Copy .env.example to .env and update values.
 
-1. Copy .env.example to .env and update values.
-2. docker-compose up --build
-
-See docs/DEPLOYMENT.md for more details.
