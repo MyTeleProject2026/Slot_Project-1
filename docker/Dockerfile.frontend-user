@@ -1,0 +1,9 @@
+# Dockerfile for frontend-user (minimal)
+FROM node:18-alpine
+WORKDIR /app
+COPY frontend-user/package.json ./
+RUN npm install --production
+COPY frontend-user/ ./frontend-user/
+WORKDIR /app/frontend-user
+EXPOSE 5173
+CMD ["npm", "run", "start"]

@@ -1,0 +1,7 @@
+# slot-app placeholder
+apiVersion: v1
+kind: SlotApp
+metadata:
+  name: slotopol-placeholder
+spec:
+  replicas: 1
