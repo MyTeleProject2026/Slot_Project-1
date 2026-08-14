@@ -1,37 +1,130 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
-const AuthContext = createContext(null)
+const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [token, setToken] = useState(null)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  const login = useCallback(({ user: u, token: t }) => {
-    setUser(u)
-    setToken(t)
-    // optionally persist to localStorage
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const api = axios.create({
+    baseURL: API_URL,
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 30000,
+  });
+
+  // Request interceptor: add token
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Response interceptor: refresh token
+  api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          const refreshToken = localStorage.getItem('refreshToken');
+          if (!refreshToken) throw new Error('No refresh token');
+          const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+          const { token } = response.data;
+          localStorage.setItem('token', token);
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          logout();
+          navigate('/login');
+          return Promise.reject(refreshError);
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  // Check auth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await api.get('/auth/me');
+          setUser(response.data.user);
+          setIsAuthenticated(true);
+        } catch (error) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  const login = async (username, password) => {
     try {
-      localStorage.setItem('auth_user', JSON.stringify(u))
-      localStorage.setItem('auth_token', t)
-    } catch (e) {}
-  }, [])
+      const response = await api.post('/auth/login', { username, password });
+      const { token, refreshToken, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true };
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Login failed');
+    }
+  };
 
-  const logout = useCallback(() => {
-    setUser(null)
-    setToken(null)
+  const register = async (userData) => {
     try {
-      localStorage.removeItem('auth_user')
-      localStorage.removeItem('auth_token')
-    } catch (e) {}
-  }, [])
+      const response = await api.post('/auth/register', userData);
+      const { token, refreshToken, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
+      setUser(user);
+      setIsAuthenticated(true);
+      return { success: true };
+    } catch (error) {
+      throw new Error(error.response?.data?.error || 'Registration failed');
+    }
+  };
 
-  const value = { user, token, login, logout, setUser, setToken }
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    setUser(null);
+    setIsAuthenticated(false);
+    toast.success('Logged out successfully');
+    navigate('/');
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
+  const value = {
+    user,
+    isAuthenticated,
+    loading,
+    login,
+    register,
+    logout,
+    api,
+  };
 
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider')
-  return ctx
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export default AuthContext;
