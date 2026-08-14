@@ -1,9 +1,12 @@
 {
-  "name": "slot-project-frontend-user",
-  "version": "0.1.0",
-  "private": true,
+  "name": "fattbet-user",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3000",
     "build": "vite build",
     "preview": "vite preview"
   },
