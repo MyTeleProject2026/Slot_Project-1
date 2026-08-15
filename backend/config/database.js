@@ -5,7 +5,7 @@ dotenv.config();
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 3306,
+  port: parseInt(process.env.DB_PORT) || 4000,  // TiDB default port
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'fattbet_clone',
@@ -14,6 +14,10 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
+  // ✅ IMPORTANT: Add SSL/TLS for TiDB Cloud
+  ssl: {
+    rejectUnauthorized: true  // For production TiDB Cloud
+  }
 });
 
 // Test connection
@@ -24,7 +28,7 @@ pool.getConnection()
   })
   .catch(err => {
     console.error('❌ Database connection failed:', err.message);
-    // Do not exit process on Render; let it retry later
+    // Don't exit process on Render; let it retry
   });
 
 module.exports = pool;
