@@ -1,5 +1,8 @@
-// Slotopol service config placeholder
+const dotenv = require('dotenv');
+dotenv.config();
+
 module.exports = {
-  endpoint: process.env.SLOTOPOL_ENDPOINT || 'https://slotopol.example.com',
-  apiKey: process.env.SLOTOPOL_API_KEY || ''
+  url: process.env.SLOTOPOL_URL || 'http://localhost:8080',
+  adminEmail: process.env.SLOTOPOL_ADMIN_EMAIL || 'admin@slotopol.com',
+  adminPassword: process.env.SLOTOPOL_ADMIN_PASSWORD || 'admin123',
 };
