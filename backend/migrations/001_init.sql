@@ -1,0 +1,2 @@
+-- Run this once to create tables if not using the earlier schema
+-- See previous SQL for full schema. This is a placeholder.
