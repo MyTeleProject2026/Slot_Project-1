@@ -1,11 +1,48 @@
-const express = require('express');
-const router = express.Router();
-const authController = require('../controllers/authController');
-const { validate, registerValidation, loginValidation } = require('../middleware/validation');
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
 
-router.post('/register', validate(registerValidation), authController.register);
-router.post('/login', validate(loginValidation), authController.login);
-router.post('/refresh', authController.refreshToken);
-router.get('/me', authController.getMe);
+dotenv.config();
 
-module.exports = router;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key-change-in-production';
+const JWT_EXPIRE = process.env.JWT_EXPIRE || '7d';
+const JWT_REFRESH_EXPIRE = process.env.JWT_REFRESH_EXPIRE || '30d';
+
+const generateToken = (userId, role) => {
+  return jwt.sign(
+    { userId, role },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRE }
+  );
+};
+
+const generateRefreshToken = (userId) => {
+  return jwt.sign(
+    { userId },
+    JWT_SECRET,
+    { expiresIn: JWT_REFRESH_EXPIRE }
+  );
+};
+
+const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    return null;
+  }
+};
+
+const decodeToken = (token) => {
+  try {
+    return jwt.decode(token);
+  } catch (error) {
+    return null;
+  }
+};
+
+module.exports = {
+  generateToken,
+  generateRefreshToken,
+  verifyToken,
+  decodeToken,
+  JWT_SECRET
+};
