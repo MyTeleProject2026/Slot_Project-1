@@ -5,6 +5,8 @@
 :root {
   --vh: 1vh;
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -30,43 +32,77 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-#root {
-  min-height: 100vh;
-  min-height: calc(var(--vh, 1vh) * 100);
-  display: flex;
-  flex-direction: column;
-}
-
-/* Scrollbar */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #f1c40f;
+  background: linear-gradient(180deg, #f1c40f, #e67e22);
   border-radius: 10px;
 }
 
-/* Touch improvements */
-button, a, input, select, textarea {
-  touch-action: manipulation;
+/* Glassmorphism */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
 }
 
-/* Input styling */
-input, select, textarea {
-  -webkit-appearance: none;
-  appearance: none;
+.glass-light {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Safe area for notch */
-.safe-area-bottom {
-  padding-bottom: var(--safe-area-inset-bottom);
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #f1c40f, #e67e22);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* Shimmer loading */
+/* Neon Glow */
+.glow {
+  box-shadow: 0 0 30px rgba(241, 196, 15, 0.15);
+}
+.glow-hover:hover {
+  box-shadow: 0 0 40px rgba(241, 196, 15, 0.25);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(241, 196, 15, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(241, 196, 15, 0.4); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Card Hover Effects */
+.card-hover {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.card-hover:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Shimmer Loading */
 @keyframes shimmer {
   0% { background-position: -1000px 0; }
   100% { background-position: 1000px 0; }
@@ -77,49 +113,21 @@ input, select, textarea {
   animation: shimmer 2s ease-in-out infinite;
 }
 
-/* Hide scrollbar for game grids */
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* Swiper Customization */
+.swiper-pagination-bullet {
+  background: rgba(255, 255, 255, 0.3) !important;
+  width: 10px !important;
+  height: 10px !important;
 }
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-/* Glassmorphism */
-.glass {
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.05);
+.swiper-pagination-bullet-active {
+  background: #f1c40f !important;
+  box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
 }
 
-/* Responsive container padding */
+/* Responsive container */
 @media (max-width: 640px) {
-  .container {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
+  .container { padding-left: 12px; padding-right: 12px; }
 }
 @media (min-width: 768px) {
-  .container {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-}
-
-/* Fade animations */
-.fade-enter {
-  opacity: 0;
-}
-.fade-enter-active {
-  opacity: 1;
-  transition: opacity 300ms;
-}
-.fade-exit {
-  opacity: 1;
-}
-.fade-exit-active {
-  opacity: 0;
-  transition: opacity 300ms;
+  .container { padding-left: 24px; padding-right: 24px; }
 }
