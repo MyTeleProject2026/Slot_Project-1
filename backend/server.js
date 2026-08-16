@@ -61,7 +61,7 @@ app.use('/api', limiter);
 // CORS
 const corsOptions = {
   origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
+    process.env.FRONTEND_URL || 'http://localhost:3000', 'https://testing-frontend-deploy.onrender.com',
     process.env.ADMIN_URL || 'http://localhost:3001',
     process.env.SUPER_ADMIN_URL || 'http://localhost:3002',
     process.env.MAIN_ADMIN_URL || 'http://localhost:3003'
