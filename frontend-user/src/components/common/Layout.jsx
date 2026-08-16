@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Component } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import Footer from './Footer';
@@ -7,7 +7,7 @@ import Marquee from './Marquee';
 import FloatingButtons from './FloatingButtons';
 import BottomNav from './BottomNav';
 
-// Internal error boundary to isolate component failures
+// Internal error boundary
 class ComponentErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -23,7 +23,7 @@ class ComponentErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div style={{ padding: '8px', background: 'rgba(255,0,0,0.2)', color: '#ff6b6b', textAlign: 'center', border: '1px solid rgba(255,0,0,0.3)', borderRadius: '8px', margin: '4px' }}>
-          ⚠️ {this.props.name} crashed. Check console for details.
+          ⚠️ {this.props.name} crashed. Check console.
         </div>
       );
     }
@@ -57,34 +57,52 @@ const Layout = ({ children }) => {
       </ComponentErrorBoundary>
 
       <div className="flex flex-1">
+        {/* Sidebar - Desktop always visible, Mobile slides in */}
         {isDesktop && (
-          <ComponentErrorBoundary name="Sidebar (desktop)">
+          <ComponentErrorBoundary name="Sidebar">
             <Sidebar isOpen={true} onClose={() => {}} />
           </ComponentErrorBoundary>
         )}
 
+        {/* Mobile Sidebar Overlay */}
         {!isDesktop && (
-          <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-            <div className="absolute inset-0 bg-black/70" onClick={() => setIsSidebarOpen(false)} />
-            <div className={`absolute left-0 top-0 h-full w-72 bg-dark-900 transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-              <ComponentErrorBoundary name="Sidebar (mobile)">
+          <div 
+            className={`fixed inset-0 z-50 transition-all duration-300 ${
+              isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+          >
+            <div 
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
+              onClick={() => setIsSidebarOpen(false)} 
+            />
+            <div 
+              className={`absolute left-0 top-0 h-full w-72 bg-dark-900 shadow-2xl transition-transform duration-300 ${
+                isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+              }`}
+            >
+              <ComponentErrorBoundary name="Sidebar">
                 <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
               </ComponentErrorBoundary>
             </div>
           </div>
         )}
 
-        <main className={`flex-1 ${!isDesktop ? 'pb-20' : ''}`}>
-          {children}
+        {/* Main Content */}
+        <main className="flex-1 w-full overflow-x-hidden">
+          <div className="container py-4 md:py-6">
+            {children}
+          </div>
         </main>
       </div>
 
+      {/* Bottom Navigation - Mobile Only */}
       {!isDesktop && (
         <ComponentErrorBoundary name="BottomNav">
           <BottomNav />
         </ComponentErrorBoundary>
       )}
 
+      {/* Footer - Desktop Only */}
       {isDesktop && (
         <ComponentErrorBoundary name="Footer">
           <Footer />
