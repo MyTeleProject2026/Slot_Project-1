@@ -85,9 +85,12 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('refreshToken', refreshToken);
       setUser(user);
       setIsAuthenticated(true);
+      toast.success('Welcome back!');
       return { success: true };
     } catch (error) {
-      throw new Error(error.response?.data?.error || 'Login failed');
+      const msg = error.response?.data?.error || 'Login failed';
+      toast.error(msg);
+      throw new Error(msg);
     }
   };
 
@@ -99,9 +102,12 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('refreshToken', refreshToken);
       setUser(user);
       setIsAuthenticated(true);
+      toast.success('Account created successfully!');
       return { success: true };
     } catch (error) {
-      throw new Error(error.response?.data?.error || 'Registration failed');
+      const msg = error.response?.data?.error || 'Registration failed';
+      toast.error(msg);
+      throw new Error(msg);
     }
   };
 
