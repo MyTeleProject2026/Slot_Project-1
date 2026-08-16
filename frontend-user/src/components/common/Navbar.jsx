@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaBars, FaUser, FaWallet, FaSignOutAlt } from 'react-icons/fa';
+import { FaBars, FaUser, FaWallet, FaSignOutAlt, FaSearch } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
 
@@ -9,56 +9,97 @@ const Navbar = ({ onMenuClick }) => {
   const { balance } = useWallet();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/games?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
   return (
-    <nav className="sticky top-0 z-40 bg-dark-900/95 backdrop-blur-md border-b border-dark-800">
+    <nav className="sticky top-0 z-40 bg-dark-900/95 backdrop-blur-xl border-b border-dark-800/50 shadow-lg">
       <div className="container mx-auto px-3">
         <div className="flex items-center justify-between h-14 md:h-16">
           {/* Left */}
           <div className="flex items-center gap-2">
-            <button onClick={onMenuClick} className="lg:hidden p-2 text-white hover:text-primary-500 transition" aria-label="Menu">
+            <button 
+              onClick={onMenuClick} 
+              className="lg:hidden p-2 text-white hover:text-primary-500 transition-all hover:scale-110" 
+              aria-label="Menu"
+            >
               <FaBars className="text-xl" />
             </button>
-            <Link to="/" className="flex items-center gap-2">
-              <img src="/assets/logo.png" alt="FattBet" className="h-8 md:h-10 w-auto" />
+            <Link to="/" className="flex items-center gap-2 group">
+              <img 
+                src="/assets/logo.png" 
+                alt="FattBet" 
+                className="h-8 md:h-10 w-auto transition-all group-hover:scale-105" 
+              />
             </Link>
           </div>
 
           {/* Center Search (desktop) */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
-            <input type="text" placeholder="Search games..." className="w-full bg-dark-800 text-white text-sm rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 transition" />
-          </div>
+          <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4 relative">
+            <input 
+              type="text" 
+              placeholder="Search games..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-dark-800/80 text-white text-sm rounded-full px-4 py-2 pl-11 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all backdrop-blur-sm border border-dark-700/50 focus:border-primary-500"
+            />
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm" />
+          </form>
 
           {/* Right */}
           <div className="flex items-center gap-2 md:gap-4">
             {isAuthenticated ? (
               <>
-                <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-primary-500/10 rounded-full border border-primary-500/20">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-primary-500/10 rounded-full border border-primary-500/30 backdrop-blur-sm">
                   <FaWallet className="text-primary-500 text-sm" />
-                  <span className="text-white font-medium text-sm">{balance?.main?.toFixed(2) || '0.00'}</span>
+                  <span className="text-white font-medium text-sm">
+                    {balance?.main?.toFixed(2) || '0.00'}
+                  </span>
                 </div>
                 <div className="relative">
-                  <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center gap-2 p-2 rounded-full hover:bg-dark-800 transition">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-orange-500 flex items-center justify-center text-dark-900 font-bold text-sm">
+                  <button 
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)} 
+                    className="flex items-center gap-2 p-1.5 rounded-full hover:bg-dark-800/80 transition-all backdrop-blur-sm"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-orange-500 flex items-center justify-center text-dark-900 font-bold text-sm shadow-lg shadow-primary-500/25">
                       {user?.username?.charAt(0).toUpperCase() || 'U'}
                     </div>
-                    <span className="hidden md:block text-sm font-medium">{user?.username}</span>
+                    <span className="hidden md:block text-sm font-medium text-gray-200">
+                      {user?.username}
+                    </span>
                   </button>
                   {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-dark-800 rounded-lg shadow-xl border border-dark-700 py-1 z-50">
-                      <Link to="/profile" className="flex items-center gap-3 px-4 py-2 hover:bg-dark-700 transition" onClick={() => setIsDropdownOpen(false)}>
+                    <div className="absolute right-0 mt-2 w-52 bg-dark-800/95 backdrop-blur-xl rounded-xl shadow-2xl border border-dark-700/50 py-1 z-50 overflow-hidden">
+                      <Link 
+                        to="/profile" 
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-dark-700/50 transition-all" 
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
                         <FaUser className="text-primary-500" /> <span>Profile</span>
                       </Link>
-                      <Link to="/wallet" className="flex items-center gap-3 px-4 py-2 hover:bg-dark-700 transition" onClick={() => setIsDropdownOpen(false)}>
+                      <Link 
+                        to="/wallet" 
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-dark-700/50 transition-all" 
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
                         <FaWallet className="text-primary-500" /> <span>Wallet</span>
                       </Link>
-                      <hr className="border-dark-700 my-1" />
-                      <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-dark-700 transition text-red-400">
+                      <hr className="border-dark-700/50 my-1" />
+                      <button 
+                        onClick={handleLogout} 
+                        className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-red-500/10 transition-all text-red-400"
+                      >
                         <FaSignOutAlt /> <span>Logout</span>
                       </button>
                     </div>
@@ -67,8 +108,18 @@ const Navbar = ({ onMenuClick }) => {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Link to="/login" className="px-4 py-1.5 text-sm font-medium text-white hover:text-primary-500 transition">Login</Link>
-                <Link to="/register" className="px-4 py-1.5 text-sm font-medium bg-primary-500 text-dark-900 rounded-full hover:bg-primary-400 transition">Register</Link>
+                <Link 
+                  to="/login" 
+                  className="px-4 py-1.5 text-sm font-medium text-white hover:text-primary-500 transition-all"
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/register" 
+                  className="px-4 py-1.5 text-sm font-medium bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full hover:shadow-lg hover:shadow-primary-500/30 transition-all hover:scale-105"
+                >
+                  Register
+                </Link>
               </div>
             )}
           </div>
