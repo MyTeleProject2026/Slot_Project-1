@@ -39,7 +39,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
       <motion.div 
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 20 }}
@@ -47,15 +47,14 @@ const Login = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-500 to-orange-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
-            <FaUserCircle className="text-4xl text-dark-900" />
+          <div className="w-16 md:w-20 h-16 md:h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-500 to-orange-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
+            <FaUserCircle className="text-3xl md:text-4xl text-dark-900" />
           </div>
-          <h1 className="text-2xl font-bold gradient-text">Welcome Back</h1>
+          <h1 className="text-2xl md:text-3xl font-bold gradient-text">Welcome Back</h1>
           <p className="text-gray-400 text-sm mt-1">Sign in to continue playing</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-dark-700/50 shadow-2xl space-y-4">
-          {/* Username */}
+        <form onSubmit={handleSubmit} className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-dark-700/50 shadow-2xl space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Username</label>
             <div className="relative">
@@ -74,7 +73,6 @@ const Login = () => {
             {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
             <div className="relative">
@@ -100,7 +98,6 @@ const Login = () => {
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
-          {/* Remember & Forgot */}
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-sm text-gray-400">
               <input
@@ -116,7 +113,6 @@ const Login = () => {
             </Link>
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
