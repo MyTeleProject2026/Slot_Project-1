@@ -186,10 +186,14 @@ export const GameProvider = ({ children }) => {
     }
   }, []);
 
-  // Initial fetch
+  // In GameContext.jsx - initial fetch
   useEffect(() => {
-    fetchGames();
-    fetchProviders();
+    let mounted = true;
+    if (mounted) {
+      fetchGames();
+      fetchProviders();
+    }
+    return () => { mounted = false; };
   }, []);
 
   const value = {
