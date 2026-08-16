@@ -55,7 +55,7 @@ class ErrorBoundary extends Component {
 }
 
 // ============================================================
-// Lazy-loaded pages – THESE ARE YOUR REAL PAGE COMPONENTS
+// Lazy-loaded pages
 // ============================================================
 const Home = lazy(() => import('./pages/Home'));
 const Games = lazy(() => import('./pages/Games'));
@@ -103,6 +103,7 @@ function App() {
                       background: '#1a1a2e',
                       color: '#fff',
                       borderRadius: '12px',
+                      maxWidth: '400px',
                     },
                     success: {
                       iconTheme: { primary: '#4ade80', secondary: '#1a1a2e' },
