@@ -48,8 +48,13 @@ export const GameProvider = ({ children }) => {
     { id: 'fishing', name: 'Fishing', icon: '🎣' },
     { id: 'lotto', name: 'Lotto', icon: '🎱' },
   ];
+  
+  // Add a flag to prevent multiple simultaneous calls  
+  let isFetching = false;
 
   const fetchGames = async (params = {}) => {
+    if (isFetching) return []; // Prevent duplicate calls
+    isFetching = true;
     setLoading(true);
     setError(null);
     try {
@@ -60,14 +65,14 @@ export const GameProvider = ({ children }) => {
     } catch (error) {
       console.error('Fetch games error:', error);
       setError('Failed to load games. Please refresh.');
-      toast.error('Failed to load games');
       setGames([]);
       return [];
     } finally {
       setLoading(false);
+      isFetching = false;
     }
   };
-
+  
   const fetchProviders = async () => {
     try {
       const data = await gameService.getProviders();
