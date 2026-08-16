@@ -41,10 +41,10 @@ export const LanguageProvider = ({ children }) => {
     isMyanmar: language === LANGUAGES.MM,
   };
 
-  return (
-    <LanguageContext.Provider value={value}>
-      {children}
-    </LanguageContext.Provider>
+  return React.createElement(
+    LanguageContext.Provider,
+    { value: value },
+    children
   );
 };
 
