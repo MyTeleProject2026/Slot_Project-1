@@ -42,9 +42,11 @@ export const LanguageProvider = ({ children }) => {
   };
 
   return (
-    <LanguageContext.Provider value={value}>
-      {children}
-    </LanguageContext.Provider>
+    <>
+      <LanguageContext.Provider value={value}>
+        {children}
+      </LanguageContext.Provider>
+    </>
   );
 };
 
