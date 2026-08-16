@@ -14,10 +14,22 @@ const Home = () => {
   const { games, loading, fetchGames } = useGames();
   const [featured, setFeatured] = useState([]);
   const [hot, setHot] = useState([]);
+  const [error, setError] = useState(null);
 
-  useEffect(() => { fetchGames(); }, []);
   useEffect(() => {
-    if (games.length) {
+    const loadGames = async () => {
+      try {
+        await fetchGames();
+      } catch (err) {
+        console.error('Failed to load games:', err);
+        setError('Unable to load games. Please try again later.');
+      }
+    };
+    loadGames();
+  }, [fetchGames]);
+
+  useEffect(() => {
+    if (games && games.length) {
       setFeatured(games.filter(g => g.is_popular).slice(0, 10));
       setHot(games.filter(g => g.is_hot).slice(0, 8));
     }
@@ -30,6 +42,10 @@ const Home = () => {
   ];
 
   if (loading) return <LoadingSpinner />;
+  if (error) return <div className="text-center text-red-500 p-8">{error}</div>;
+
+  // Ensure games is an array even if empty
+  const safeGames = games || [];
 
   return (
     <div className="container mx-auto px-3 py-4 pb-20 md:pb-10">
@@ -74,7 +90,7 @@ const Home = () => {
           <Link to="/games" className="text-sm text-primary-500 hover:text-primary-400">View All</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {hot.slice(0, 6).map(game => <GameCard key={game.id} game={game} />)}
+          {hot.length > 0 ? hot.slice(0, 6).map(game => <GameCard key={game.id} game={game} />) : <p className="text-gray-400 col-span-full">No hot games available</p>}
         </div>
       </div>
 
@@ -85,7 +101,7 @@ const Home = () => {
           <Link to="/games" className="text-sm text-primary-500 hover:text-primary-400">View All</Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {featured.slice(0, 6).map(game => <GameCard key={game.id} game={game} />)}
+          {featured.length > 0 ? featured.slice(0, 6).map(game => <GameCard key={game.id} game={game} />) : <p className="text-gray-400 col-span-full">No featured games available</p>}
         </div>
       </div>
     </div>
