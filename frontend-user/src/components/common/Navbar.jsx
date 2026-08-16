@@ -3,10 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaBars, FaUser, FaWallet, FaSignOutAlt, FaSearch, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Navbar = ({ onMenuClick }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { balance } = useWallet();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +54,7 @@ const Navbar = ({ onMenuClick }) => {
           <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4 relative">
             <input 
               type="text" 
-              placeholder="Search games..." 
+              placeholder={t('games.searchPlaceholder')} 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-dark-800/80 text-white text-sm rounded-full px-4 py-2 pl-11 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all backdrop-blur-sm border border-dark-700/50 focus:border-primary-500"
@@ -61,6 +64,9 @@ const Navbar = ({ onMenuClick }) => {
 
           {/* Right */}
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Mobile Search Toggle */}
             <button 
               onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -97,21 +103,21 @@ const Navbar = ({ onMenuClick }) => {
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-dark-700/50 transition-all" 
                         onClick={() => setIsDropdownOpen(false)}
                       >
-                        <FaUser className="text-primary-500" /> <span>Profile</span>
+                        <FaUser className="text-primary-500" /> <span>{t('nav.profile')}</span>
                       </Link>
                       <Link 
                         to="/wallet" 
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-dark-700/50 transition-all" 
                         onClick={() => setIsDropdownOpen(false)}
                       >
-                        <FaWallet className="text-primary-500" /> <span>Wallet</span>
+                        <FaWallet className="text-primary-500" /> <span>{t('nav.wallet')}</span>
                       </Link>
                       <hr className="border-dark-700/50 my-1" />
                       <button 
                         onClick={handleLogout} 
                         className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-red-500/10 transition-all text-red-400"
                       >
-                        <FaSignOutAlt /> <span>Logout</span>
+                        <FaSignOutAlt /> <span>{t('nav.logout')}</span>
                       </button>
                     </div>
                   )}
@@ -123,13 +129,13 @@ const Navbar = ({ onMenuClick }) => {
                   to="/login" 
                   className="px-3 md:px-4 py-1.5 text-xs md:text-sm font-medium text-white hover:text-primary-500 transition-all"
                 >
-                  Login
+                  {t('nav.login')}
                 </Link>
                 <Link 
                   to="/register" 
                   className="px-3 md:px-4 py-1.5 text-xs md:text-sm font-medium bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full hover:shadow-lg hover:shadow-primary-500/30 transition-all hover:scale-105"
                 >
-                  Register
+                  {t('nav.register')}
                 </Link>
               </div>
             )}
@@ -142,7 +148,7 @@ const Navbar = ({ onMenuClick }) => {
             <form onSubmit={handleSearch} className="relative">
               <input 
                 type="text" 
-                placeholder="Search games..." 
+                placeholder={t('games.searchPlaceholder')} 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-dark-800/80 text-white text-sm rounded-full px-4 py-2 pl-11 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all backdrop-blur-sm border border-dark-700/50 focus:border-primary-500"
