@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { WalletProvider } from './contexts/WalletContext';
+import { GameProvider } from './contexts/GameContext';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // ============================================================
@@ -150,31 +152,34 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        {/* Router MUST be above AuthProvider so useNavigate works */}
         <Router>
           <AuthProvider>
-            <Toaster
-              position="top-center"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#1a1a2e',
-                  color: '#fff',
-                  borderRadius: '12px',
-                },
-              }}
-            />
-            <SimpleLayout>
-              <Suspense fallback={<LoadingSpinner fullScreen />}>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/games" element={<Games />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </SimpleLayout>
+            <WalletProvider>
+              <GameProvider>
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
+                    duration: 3000,
+                    style: {
+                      background: '#1a1a2e',
+                      color: '#fff',
+                      borderRadius: '12px',
+                    },
+                  }}
+                />
+                <SimpleLayout>
+                  <Suspense fallback={<LoadingSpinner fullScreen />}>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/games" element={<Games />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </SimpleLayout>
+              </GameProvider>
+            </WalletProvider>
           </AuthProvider>
         </Router>
       </ThemeProvider>
