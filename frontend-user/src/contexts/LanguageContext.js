@@ -41,6 +41,7 @@ export const LanguageProvider = ({ children }) => {
     isMyanmar: language === LANGUAGES.MM,
   };
 
+  // Using React.createElement to bypass JSX parser issues
   return React.createElement(
     LanguageContext.Provider,
     { value: value },
