@@ -3,13 +3,15 @@ import { useLocation } from 'react-router-dom';
 import { useGames } from '../hooks/useGames';
 import GameCard from '../components/games/GameCard';
 import ProviderFilter from '../components/games/ProviderFilter';
+import GameSearch from '../components/games/GameSearch';
+import GameCategories from '../components/games/GameCategories';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
+import { FaFilter, FaTimes } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 
 const Games = () => {
   const location = useLocation();
-  const { games, loading, fetchGames, searchGames, providers, fetchProviders } = useGames();
+  const { games, loading, fetchGames, searchGames, providers, fetchProviders, categories } = useGames();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -27,10 +29,10 @@ const Games = () => {
     fetchProviders();
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      searchGames(searchQuery);
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      searchGames(query);
     } else {
       fetchGames();
     }
@@ -53,79 +55,62 @@ const Games = () => {
     fetchGames();
   };
 
-  const categories = ['All', 'slots', 'live', 'sports', 'fishing', 'lotto'];
-
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="w-full">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold gradient-text mb-6">All Games</h1>
+        <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-4 md:mb-6">All Games</h1>
       </motion.div>
 
       {/* Search & Filters */}
       <motion.div 
-        className="flex flex-col md:flex-row gap-4 mb-6"
+        className="flex flex-col md:flex-row gap-3 md:gap-4 mb-4 md:mb-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search games..."
-              className="w-full bg-dark-800/80 backdrop-blur-sm text-white rounded-xl px-4 py-3 pl-11 border border-dark-700/50 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all"
-            />
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-          </div>
-          <button type="submit" className="px-6 py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-xl font-medium hover:shadow-lg hover:shadow-primary-500/25 transition-all hover:scale-105">
-            Search
-          </button>
-        </form>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="px-4 py-3 bg-dark-800/80 backdrop-blur-sm text-gray-300 rounded-xl hover:bg-dark-700/80 transition-all flex items-center gap-2 border border-dark-700/50"
-        >
-          <FaFilter /> Filters
-          {(selectedCategory || selectedProvider) && (
-            <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
-          )}
-        </button>
-        {(selectedCategory || selectedProvider || searchQuery) && (
+        <GameSearch
+          value={searchQuery}
+          onChange={handleSearch}
+          placeholder="Search games..."
+          className="flex-1"
+        />
+        <div className="flex gap-2">
           <button
-            onClick={clearFilters}
-            className="px-4 py-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all flex items-center gap-2 border border-red-500/20"
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-4 py-3 bg-dark-800/80 backdrop-blur-sm text-gray-300 rounded-xl hover:bg-dark-700/80 transition-all flex items-center gap-2 border border-dark-700/50 flex-1 md:flex-none justify-center"
           >
-            <FaTimes /> Clear
+            <FaFilter /> Filters
+            {(selectedCategory || selectedProvider) && (
+              <span className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></span>
+            )}
           </button>
-        )}
+          {(selectedCategory || selectedProvider || searchQuery) && (
+            <button
+              onClick={clearFilters}
+              className="px-4 py-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all flex items-center gap-2 border border-red-500/20 flex-1 md:flex-none justify-center"
+            >
+              <FaTimes /> Clear
+            </button>
+          )}
+        </div>
       </motion.div>
 
-      {/* Category Filters */}
+      {/* Categories */}
       <motion.div 
-        className="flex flex-wrap gap-2 mb-4"
+        className="mb-4"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
       >
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => handleFilter('category', cat === 'All' ? '' : cat)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-              (cat === 'All' && !selectedCategory) || selectedCategory === cat
-                ? 'bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 shadow-lg shadow-primary-500/25'
-                : 'bg-dark-800/80 backdrop-blur-sm text-gray-300 hover:bg-dark-700/80 border border-dark-700/30'
-            }`}
-          >
-            {cat.charAt(0).toUpperCase() + cat.slice(1)}
-          </button>
-        ))}
+        <GameCategories
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(catId) => handleFilter('category', catId)}
+        />
       </motion.div>
 
       {/* Provider Filter */}
@@ -162,7 +147,7 @@ const Games = () => {
         </motion.div>
       ) : (
         <motion.div 
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+          className="game-grid"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
