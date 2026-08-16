@@ -64,7 +64,7 @@ const Withdraw = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-md">
+    <div className="container max-w-md mx-auto px-4 py-6">
       {/* Back Button */}
       <button 
         onClick={() => navigate(-1)}
