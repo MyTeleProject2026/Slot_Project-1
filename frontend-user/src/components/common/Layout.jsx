@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
@@ -7,44 +7,29 @@ import Marquee from './Marquee';
 import FloatingButtons from './FloatingButtons';
 import BottomNav from './BottomNav';
 
-// Small error boundary to isolate component failures
-const ComponentErrorBoundary = ({ children, name }) => {
-  const [hasError, setHasError] = useState(false);
-  const [error, setError] = useState(null);
-
-  React.useEffect(() => {
-    const handleError = (err) => {
-      console.error(`❌ ${name} crashed:`, err);
-      setHasError(true);
-      setError(err);
-    };
-    // We can't catch render errors with try-catch, but we can log them.
-    // This is just for logging; the actual error will still propagate.
-    // But we can use it to show a fallback.
-    return () => {};
-  }, []);
-
-  if (hasError) {
-    return (
-      <div style={{ padding: '8px', background: 'red', color: 'white' }}>
-        ⚠️ {name} crashed. Check console for details.
-      </div>
-    );
+// Internal error boundary to isolate component failures
+class ComponentErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
   }
-
-  try {
-    return children;
-  } catch (err) {
-    console.error(`🔥 ${name} render error:`, err);
-    setHasError(true);
-    setError(err);
-    return (
-      <div style={{ padding: '8px', background: 'red', color: 'white' }}>
-        ⚠️ {name} render error: {err.message}
-      </div>
-    );
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
-};
+  componentDidCatch(error, errorInfo) {
+    console.error(`❌ ${this.props.name} crashed:`, error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '8px', background: 'red', color: 'white', textAlign: 'center' }}>
+          ⚠️ {this.props.name} crashed. Check console.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const Layout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -73,7 +58,7 @@ const Layout = ({ children }) => {
 
       <div className="flex flex-1">
         {isDesktop && (
-          <ComponentErrorBoundary name="Sidebar">
+          <ComponentErrorBoundary name="Sidebar (desktop)">
             <Sidebar isOpen={true} onClose={() => {}} />
           </ComponentErrorBoundary>
         )}
