@@ -29,7 +29,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - handle token refresh
+// Response interceptor - handle token refresh and rate limiting
 api.interceptors.response.use(
   (response) => {
     // Ensure response data is valid
@@ -40,6 +40,16 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    
+    // Handle 429 Too Many Requests - retry after delay
+    if (error.response?.status === 429 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      console.warn('Rate limit hit, retrying after 5 seconds...');
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+      return api(originalRequest);
+    }
+    
+    // Handle 401 Unauthorized - refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -57,6 +67,7 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
+    
     return Promise.reject(error);
   }
 );
