@@ -23,7 +23,6 @@ const Register = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -59,10 +58,10 @@ const Register = () => {
     setLoading(true);
     try {
       await register(form);
-      // register() already shows success toast in AuthContext
+      // AuthContext shows toast on success
       navigate('/');
     } catch (error) {
-      // Error message is already shown in AuthContext via toast
+      // Error message already shown in AuthContext
       console.error('Registration error:', error);
     } finally {
       setLoading(false);
