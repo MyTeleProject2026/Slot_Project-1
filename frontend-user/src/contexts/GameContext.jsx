@@ -7,7 +7,28 @@ const GameContext = createContext();
 
 export const useGames = () => {
   const context = useContext(GameContext);
-  if (!context) throw new Error('useGames must be used within GameProvider');
+  if (!context) {
+    // Return safe defaults if context is not available
+    return {
+      games: [],
+      providers: [],
+      categories: [],
+      loading: false,
+      favorites: [],
+      activeGame: null,
+      fetchGames: async () => [],
+      fetchProviders: async () => [],
+      searchGames: async () => [],
+      getGamesByProvider: async () => [],
+      getGamesByCategory: async () => [],
+      startGame: async () => null,
+      spin: async () => null,
+      collectWin: async () => null,
+      toggleFavorite: () => {},
+      isFavorite: () => false,
+      setActiveGame: () => {},
+    };
+  }
   return context;
 };
 
@@ -18,6 +39,7 @@ export const GameProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [activeGame, setActiveGame] = useState(null);
+  const [error, setError] = useState(null);
 
   const categories = [
     { id: 'slots', name: 'Slots', icon: '🎰' },
@@ -29,13 +51,17 @@ export const GameProvider = ({ children }) => {
 
   const fetchGames = async (params = {}) => {
     setLoading(true);
+    setError(null);
     try {
       const data = await gameService.getGames(api, params);
-      setGames(data.games || []);
-      return data.games;
+      const gamesData = data.games || [];
+      setGames(gamesData);
+      return gamesData;
     } catch (error) {
       console.error('Fetch games error:', error);
+      setError('Failed to load games. Please refresh.');
       toast.error('Failed to load games');
+      setGames([]);
       return [];
     } finally {
       setLoading(false);
@@ -163,6 +189,7 @@ export const GameProvider = ({ children }) => {
     loading,
     favorites,
     activeGame,
+    error,
     fetchGames,
     fetchProviders,
     searchGames,
