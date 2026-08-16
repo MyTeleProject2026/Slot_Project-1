@@ -11,7 +11,6 @@ const GameCard = ({ game }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Safety check: if game is undefined or null, return a placeholder
   if (!game || typeof game !== 'object') {
     return (
       <div className="relative bg-dark-800/80 backdrop-blur-sm rounded-xl overflow-hidden border border-dark-700/30 aspect-[3/4] flex items-center justify-center">
@@ -29,7 +28,6 @@ const GameCard = ({ game }) => {
       return;
     }
     toast.success(`Launching ${game.name || 'game'}...`);
-    // You can add actual game launch logic here
   };
 
   const handleFavorite = (e) => {
@@ -46,7 +44,7 @@ const GameCard = ({ game }) => {
   return (
     <motion.div
       className="relative bg-dark-800/80 backdrop-blur-sm rounded-xl overflow-hidden card-hover border border-dark-700/30 group cursor-pointer"
-      whileHover={{ scale: 1.05 }}
+      whileHover={{ scale: 1.03 }}
       transition={{ duration: 0.3 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -65,11 +63,11 @@ const GameCard = ({ game }) => {
             }`}
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)} // fallback to show placeholder
+            onError={() => setImageLoaded(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-dark-800 to-dark-900">
-            <span className="text-6xl opacity-20">🎰</span>
+            <span className="text-4xl md:text-6xl opacity-20">🎰</span>
           </div>
         )}
 
@@ -114,7 +112,7 @@ const GameCard = ({ game }) => {
           }`}
         >
           <motion.button
-            className="px-6 py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary-500/25"
+            className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg shadow-primary-500/25"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             onClick={handlePlay}
@@ -125,34 +123,19 @@ const GameCard = ({ game }) => {
         </div>
       </div>
 
-      <div className="p-2.5">
-        <h3 className="text-sm font-semibold truncate text-white">
+      <div className="p-2 md:p-2.5">
+        <h3 className="text-xs md:text-sm font-semibold truncate text-white">
           {game.name || 'Unnamed Game'}
         </h3>
         <div className="flex items-center justify-between mt-1">
-          <span className="text-xs text-gray-400">
+          <span className="text-[10px] md:text-xs text-gray-400">
             RTP: {game.rtp ? `${game.rtp}%` : 'N/A'}
           </span>
-          <span className="text-xs text-primary-400 font-bold">
+          <span className="text-[10px] md:text-xs text-primary-400 font-bold">
             {game.max_multiplier ? `${game.max_multiplier}x` : '—'}
           </span>
         </div>
       </div>
-
-      <style>{`
-        .shimmer {
-          background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s ease-in-out infinite;
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        .card-hover {
-          transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-      `}</style>
     </motion.div>
   );
 };
