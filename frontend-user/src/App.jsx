@@ -52,7 +52,7 @@ class ErrorBoundary extends Component {
 }
 
 // ============================================================
-// Simple Layout with React Router Links
+// Simple Layout
 // ============================================================
 const SimpleLayout = ({ children }) => {
   return (
