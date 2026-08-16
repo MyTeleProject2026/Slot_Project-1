@@ -1,80 +1,90 @@
 import api from './api';
 
 export const gameService = {
-  // Get all games with optional filters
-  getGames: async (apiInstance, params = {}) => {
-    // Ensure params is always an object
-    const safeParams = params && typeof params === 'object' ? params : {};
-    const response = await apiInstance.get('/games', { params: safeParams });
-    return response.data;
+  // Get all games
+  getGames: async (params = {}) => {
+    try {
+      // Ensure params is an object
+      const safeParams = params && typeof params === 'object' ? params : {};
+      const response = await api.get('/games', { params: safeParams });
+      return response.data;
+    } catch (error) {
+      console.error('getGames error:', error);
+      throw error;
+    }
   },
 
-  getGameById: async (apiInstance, id) => {
+  getGameById: async (id) => {
     if (!id) throw new Error('Game ID is required');
-    const response = await apiInstance.get(`/games/${id}`);
+    const response = await api.get(`/games/${id}`);
     return response.data;
   },
 
-  getProviders: async (apiInstance) => {
-    const response = await apiInstance.get('/games/providers');
-    return response.data;
-  },
-
-  searchGames: async (apiInstance, query) => {
-    if (!query || typeof query !== 'string') {
-      return gameService.getGames(apiInstance);
+  getProviders: async () => {
+    try {
+      const response = await api.get('/games/providers');
+      return response.data;
+    } catch (error) {
+      console.error('getProviders error:', error);
+      throw error;
     }
-    const response = await apiInstance.get('/games', { params: { search: query } });
+  },
+
+  searchGames: async (query) => {
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      return gameService.getGames();
+    }
+    const response = await api.get('/games', { params: { search: query.trim() } });
     return response.data;
   },
 
-  getGamesByProvider: async (apiInstance, provider) => {
+  getGamesByProvider: async (provider) => {
     if (!provider) {
-      return gameService.getGames(apiInstance);
+      return gameService.getGames();
     }
-    const response = await apiInstance.get('/games', { params: { provider } });
+    const response = await api.get('/games', { params: { provider } });
     return response.data;
   },
 
-  getGamesByCategory: async (apiInstance, category) => {
+  getGamesByCategory: async (category) => {
     if (!category) {
-      return gameService.getGames(apiInstance);
+      return gameService.getGames();
     }
-    const response = await apiInstance.get('/games', { params: { category } });
+    const response = await api.get('/games', { params: { category } });
     return response.data;
   },
 
-  getHotGames: async (apiInstance) => {
-    const response = await apiInstance.get('/games', { params: { hot: 'true' } });
+  getHotGames: async () => {
+    const response = await api.get('/games', { params: { hot: 'true' } });
     return response.data;
   },
 
-  getNewGames: async (apiInstance) => {
-    const response = await apiInstance.get('/games', { params: { new: 'true' } });
+  getNewGames: async () => {
+    const response = await api.get('/games', { params: { new: 'true' } });
     return response.data;
   },
 
-  startGame: async (apiInstance, data) => {
+  startGame: async (data) => {
     if (!data || typeof data !== 'object') {
       throw new Error('Game data is required');
     }
-    const response = await apiInstance.post('/games/start', data);
+    const response = await api.post('/games/start', data);
     return response.data;
   },
 
-  spin: async (apiInstance, data) => {
+  spin: async (data) => {
     if (!data || typeof data !== 'object') {
       throw new Error('Spin data is required');
     }
-    const response = await apiInstance.post('/games/spin', data);
+    const response = await api.post('/games/spin', data);
     return response.data;
   },
 
-  collectWin: async (apiInstance, data) => {
+  collectWin: async (data) => {
     if (!data || typeof data !== 'object') {
       throw new Error('Collect data is required');
     }
-    const response = await apiInstance.post('/games/collect', data);
+    const response = await api.post('/games/collect', data);
     return response.data;
   },
 };
