@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -9,9 +9,9 @@ import Layout from './components/common/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
 // ============================================================
-// IMPROVED ERROR BOUNDARY – shows the actual error message
+// PROFESSIONAL ERROR BOUNDARY with detailed logging
 // ============================================================
-class ErrorBoundary extends React.Component {
+class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
@@ -38,36 +38,59 @@ class ErrorBoundary extends React.Component {
       const errorStack = this.state.error?.stack || 'No stack trace';
       
       return (
-        <div style={{ padding: '20px', color: '#fff', background: '#1a1a2e', minHeight: '100vh', fontFamily: 'monospace' }}>
-          <h1 style={{ color: '#f1c40f' }}>⚠️ Something went wrong</h1>
-          <div style={{ background: '#2d2d44', padding: '16px', borderRadius: '8px', marginTop: '12px' }}>
-            <p style={{ color: '#ff6b6b', fontWeight: 'bold' }}>Error:</p>
-            <pre style={{ color: '#ff6b6b', whiteSpace: 'pre-wrap', margin: '8px 0' }}>
-              {errorMessage}
-            </pre>
-            {errorStack && (
-              <>
-                <p style={{ color: '#ffa94d', fontWeight: 'bold', marginTop: '12px' }}>Stack Trace:</p>
-                <pre style={{ color: '#aaa', whiteSpace: 'pre-wrap', fontSize: '12px', maxHeight: '300px', overflow: 'auto' }}>
-                  {errorStack}
-                </pre>
-              </>
-            )}
-            {this.state.errorInfo?.componentStack && (
-              <>
-                <p style={{ color: '#74c0fc', fontWeight: 'bold', marginTop: '12px' }}>Component Stack:</p>
-                <pre style={{ color: '#aaa', whiteSpace: 'pre-wrap', fontSize: '12px', maxHeight: '200px', overflow: 'auto' }}>
-                  {this.state.errorInfo.componentStack}
-                </pre>
-              </>
-            )}
+        <div style={{ 
+          padding: '20px', 
+          color: '#fff', 
+          background: 'linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%)', 
+          minHeight: '100vh', 
+          fontFamily: 'Inter, sans-serif',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{ 
+            maxWidth: '600px', 
+            width: '100%',
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '20px',
+            padding: '40px'
+          }}>
+            <h1 style={{ color: '#f1c40f', fontSize: '2rem', marginBottom: '20px' }}>⚠️ Something went wrong</h1>
+            <div style={{ background: 'rgba(255,0,0,0.1)', padding: '16px', borderRadius: '12px', marginTop: '12px' }}>
+              <p style={{ color: '#ff6b6b', fontWeight: 'bold' }}>Error:</p>
+              <pre style={{ color: '#ff6b6b', whiteSpace: 'pre-wrap', margin: '8px 0' }}>
+                {errorMessage}
+              </pre>
+              {errorStack && (
+                <>
+                  <p style={{ color: '#ffa94d', fontWeight: 'bold', marginTop: '12px' }}>Stack Trace:</p>
+                  <pre style={{ color: '#aaa', whiteSpace: 'pre-wrap', fontSize: '12px', maxHeight: '300px', overflow: 'auto' }}>
+                    {errorStack}
+                  </pre>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ 
+                marginTop: '16px', 
+                padding: '12px 30px', 
+                background: '#f1c40f', 
+                color: '#000', 
+                border: 'none', 
+                borderRadius: '10px', 
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '16px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Reload
+            </button>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            style={{ marginTop: '16px', padding: '8px 20px', background: '#f1c40f', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-          >
-            Reload
-          </button>
         </div>
       );
     }
@@ -76,7 +99,7 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================================
-// Lazy-loaded pages (code splitting)
+// Lazy-loaded pages
 // ============================================================
 const Home = lazy(() => import('./pages/Home'));
 const Games = lazy(() => import('./pages/Games'));
