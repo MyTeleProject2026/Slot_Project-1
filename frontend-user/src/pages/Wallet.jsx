@@ -20,9 +20,9 @@ const Wallet = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="max-w-md mx-auto bg-dark-800/80 backdrop-blur-sm rounded-2xl p-8 border border-dark-700/50">
-          <FaWallet className="text-6xl text-gray-600 mx-auto mb-4" />
+      <div className="flex items-center justify-center min-h-[60vh] px-4">
+        <div className="max-w-md w-full bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-dark-700/50 text-center">
+          <FaWallet className="text-5xl md:text-6xl text-gray-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Wallet</h2>
           <p className="text-gray-400 mb-6">Please login to view your wallet</p>
           <Link to="/login" className="px-6 py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-xl font-semibold hover:shadow-lg hover:shadow-primary-500/25 transition-all inline-block">
@@ -38,60 +38,60 @@ const Wallet = () => {
   const totalBalance = (balance?.main || 0) + (balance?.bonus || 0) + (balance?.commission || 0);
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="w-full">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-6">My Wallet</h1>
+        <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-4 md:mb-6">My Wallet</h1>
 
         {/* Total Balance */}
-        <div className="bg-gradient-to-r from-primary-500/10 to-orange-500/10 rounded-2xl p-6 mb-6 border border-primary-500/20 backdrop-blur-sm">
+        <div className="bg-gradient-to-r from-primary-500/10 to-orange-500/10 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border border-primary-500/20 backdrop-blur-sm">
           <p className="text-gray-400 text-sm">Total Balance</p>
-          <p className="text-3xl md:text-4xl font-bold text-white">
+          <p className="text-2xl md:text-3xl font-bold text-white">
             {totalBalance.toFixed(2)} <span className="text-sm text-gray-400">THB</span>
           </p>
         </div>
 
         {/* Balance Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4 md:mb-6">
           <motion.div 
-            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-4 border border-dark-700/30"
+            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-dark-700/30"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-gray-400 text-sm">Main</p>
-            <p className="text-xl font-bold text-white">{balance?.main?.toFixed(2) || '0.00'}</p>
+            <p className="text-gray-400 text-xs md:text-sm">Main</p>
+            <p className="text-lg md:text-xl font-bold text-white">{balance?.main?.toFixed(2) || '0.00'}</p>
           </motion.div>
           <motion.div 
-            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-4 border border-dark-700/30"
+            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-dark-700/30"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-gray-400 text-sm">Bonus</p>
-            <p className="text-xl font-bold text-primary-500">{balance?.bonus?.toFixed(2) || '0.00'}</p>
+            <p className="text-gray-400 text-xs md:text-sm">Bonus</p>
+            <p className="text-lg md:text-xl font-bold text-primary-500">{balance?.bonus?.toFixed(2) || '0.00'}</p>
           </motion.div>
           <motion.div 
-            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-4 border border-dark-700/30"
+            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-dark-700/30"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-gray-400 text-sm">Commission</p>
-            <p className="text-xl font-bold text-green-500">{balance?.commission?.toFixed(2) || '0.00'}</p>
+            <p className="text-gray-400 text-xs md:text-sm">Commission</p>
+            <p className="text-lg md:text-xl font-bold text-green-500">{balance?.commission?.toFixed(2) || '0.00'}</p>
           </motion.div>
           <motion.div 
-            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-4 border border-dark-700/30"
+            className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-dark-700/30"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}
           >
-            <p className="text-gray-400 text-sm">Locked</p>
-            <p className="text-xl font-bold text-yellow-500">{balance?.locked?.toFixed(2) || '0.00'}</p>
+            <p className="text-gray-400 text-xs md:text-sm">Locked</p>
+            <p className="text-lg md:text-xl font-bold text-yellow-500">{balance?.locked?.toFixed(2) || '0.00'}</p>
           </motion.div>
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-4 md:mb-6">
           <Link to="/wallet/deposit" className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-green-500/25 transition-all hover:scale-105">
             <FaPlus /> Deposit
           </Link>
@@ -106,7 +106,7 @@ const Wallet = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium whitespace-nowrap transition-all ${
                 activeTab === tab 
                   ? 'bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 shadow-lg shadow-primary-500/25' 
                   : 'bg-dark-800/80 backdrop-blur-sm text-gray-400 hover:text-white border border-dark-700/30'
@@ -127,17 +127,17 @@ const Wallet = () => {
               <p>No transactions yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-dark-700/50">
+            <div className="divide-y divide-dark-700/50 max-h-[400px] overflow-y-auto">
               {transactions.slice(0, 20).map((tx) => (
                 <motion.div 
                   key={tx.id} 
-                  className="p-4 flex items-center justify-between hover:bg-dark-700/30 transition"
+                  className="p-3 md:p-4 flex items-center justify-between hover:bg-dark-700/30 transition"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${
                       tx.type === 'deposit' ? 'bg-green-500/20 text-green-500' :
                       tx.type === 'withdraw' ? 'bg-red-500/20 text-red-500' :
                       'bg-blue-500/20 text-blue-500'
