@@ -8,12 +8,15 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { useGames } from '../../hooks/useGames';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
 import toast from 'react-hot-toast';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { balance } = useWallet();
   const { clearCache, fetchGames, fetchProviders } = useGames();
+  const { t } = useLanguage();
   const location = useLocation();
 
   const isActive = (path) => location.pathname === path;
@@ -22,25 +25,24 @@ const Sidebar = ({ isOpen, onClose }) => {
     if (clearCache) {
       clearCache();
     }
-    // Also refetch data to refresh the UI
     await fetchGames();
     await fetchProviders();
     toast.success('Cache cleared & data refreshed!');
   };
 
   const menuItems = [
-    { path: '/', icon: FaHome, label: 'Home' },
-    { path: '/games/slots', icon: FaDice, label: 'Slots' },
-    { path: '/games/live-casino', icon: FaCrown, label: 'Live Casino' },
-    { path: '/games/sports', icon: FaFire, label: 'Sports' },
-    { path: '/games', icon: FaGamepad, label: 'All Games' },
-    { path: '/promotions', icon: FaGift, label: 'Promotions' },
-    { path: '/wallet', icon: FaWallet, label: 'Wallet' },
-    { path: '/profile', icon: FaUser, label: 'Profile' },
-    { path: '/history', icon: FaHistory, label: 'History' },
-    { path: '/leaderboard', icon: FaTrophy, label: 'Leaderboard' },
-    { path: '/referral', icon: FaUsers, label: 'Referral' },
-    { path: '/support', icon: FaHeadset, label: 'Support' },
+    { path: '/', icon: FaHome, label: t('nav.home') },
+    { path: '/games/slots', icon: FaDice, label: t('nav.slots') },
+    { path: '/games/live-casino', icon: FaCrown, label: t('nav.liveCasino') },
+    { path: '/games/sports', icon: FaFire, label: t('nav.sports') },
+    { path: '/games', icon: FaGamepad, label: t('nav.games') },
+    { path: '/promotions', icon: FaGift, label: t('nav.promotions') },
+    { path: '/wallet', icon: FaWallet, label: t('nav.wallet') },
+    { path: '/profile', icon: FaUser, label: t('nav.profile') },
+    { path: '/history', icon: FaHistory, label: t('nav.history') },
+    { path: '/leaderboard', icon: FaTrophy, label: t('nav.leaderboard') },
+    { path: '/referral', icon: FaUsers, label: t('nav.referral') },
+    { path: '/support', icon: FaHeadset, label: t('nav.support') },
   ];
 
   return (
@@ -63,10 +65,10 @@ const Sidebar = ({ isOpen, onClose }) => {
       ) : (
         <div className="p-4 border-b border-dark-800/50">
           <Link to="/login" className="w-full py-2.5 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-lg font-semibold flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-primary-500/30 transition-all hover:scale-105">
-            Login
+            {t('nav.login')}
           </Link>
           <Link to="/register" className="w-full py-2.5 mt-2 border border-dark-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-dark-800/50 transition-all">
-            Register
+            {t('nav.register')}
           </Link>
         </div>
       )}
@@ -96,27 +98,30 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Bottom */}
       <div className="p-4 border-t border-dark-800/50">
+        <div className="mb-2">
+          <LanguageSwitcher className="w-full" />
+        </div>
+
         {isAuthenticated && (
           <button 
             onClick={() => { logout(); onClose?.(); }} 
             className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-all hover:translate-x-1"
           >
-            <FaSignOutAlt /> <span className="font-medium">Logout</span>
+            <FaSignOutAlt /> <span className="font-medium">{t('nav.logout')}</span>
           </button>
         )}
         
-        {/* Cache Clear Button */}
         <button
           onClick={handleClearCache}
           className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-gray-400 hover:bg-primary-500/10 hover:text-primary-400 transition-all hover:translate-x-1 group"
         >
           <FaSync className="text-sm group-hover:rotate-180 transition-transform duration-500" />
-          <span className="font-medium text-sm">Clear Cache & Refresh</span>
+          <span className="font-medium text-sm">{t('nav.clearCache')}</span>
         </button>
 
         <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-          <span className="px-2 py-1 rounded-full bg-primary-500/10 text-primary-500">🔒 Secure</span>
-          <span className="px-2 py-1 rounded-full bg-green-500/10 text-green-400">🟢 Live</span>
+          <span className="px-2 py-1 rounded-full bg-primary-500/10 text-primary-500">🔒 {t('nav.secure')}</span>
+          <span className="px-2 py-1 rounded-full bg-green-500/10 text-green-400">🟢 {t('nav.live')}</span>
         </div>
       </div>
     </div>
