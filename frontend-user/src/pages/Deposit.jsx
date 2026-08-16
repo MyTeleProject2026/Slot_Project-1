@@ -53,7 +53,7 @@ const Deposit = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-md">
+    <div className="container max-w-md mx-auto px-4 py-6">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-all hover:translate-x-[-4px]">
         <FaArrowLeft /> Back
       </button>
