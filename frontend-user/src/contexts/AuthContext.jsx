@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
     headers: { 'Content-Type': 'application/json' },
     timeout: 30000,
   });
+
   // Request interceptor: add token
   api.interceptors.request.use(
     (config) => {
@@ -129,11 +130,7 @@ export const AuthProvider = ({ children }) => {
     api,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;
