@@ -11,6 +11,7 @@ export const useGames = () => {
       loading: false,
       favorites: [],
       activeGame: null,
+      error: null,
       fetchGames: async () => [],
       fetchProviders: async () => [],
       searchGames: async () => [],
