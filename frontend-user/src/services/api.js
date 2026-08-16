@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Use environment variable or fallback to your backend URL
 const API_URL = import.meta.env.VITE_API_URL || 'https://testing-backend-deploy-epvl.onrender.com/api';
 
 export const api = axios.create({
@@ -14,6 +13,10 @@ export const api = axios.create({
 // Request interceptor - add token
 api.interceptors.request.use(
   (config) => {
+    // Ensure headers object exists
+    if (!config.headers) {
+      config.headers = {};
+    }
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -28,7 +31,13 @@ api.interceptors.request.use(
 
 // Response interceptor - handle token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Ensure response data is valid
+    if (!response.data) {
+      console.warn('Empty response data');
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
