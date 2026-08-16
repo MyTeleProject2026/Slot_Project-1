@@ -8,7 +8,13 @@ import toast from 'react-hot-toast';
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const [form, setForm] = useState({ username: '', email: '', password: '', fullName: '', phone: '' });
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    fullName: '',
+    phone: '',
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -16,20 +22,32 @@ const Register = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    setForm((prev) => ({ ...prev, [name]: value }));
+    // Clear error for this field when user types
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
   const validate = () => {
     const newErrors = {};
-    if (!form.username) newErrors.username = 'Username is required';
+    if (!form.username.trim()) newErrors.username = 'Username is required';
     else if (form.username.length < 3) newErrors.username = 'Minimum 3 characters';
-    if (!form.email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Invalid email';
+    else if (form.username.length > 20) newErrors.username = 'Maximum 20 characters';
+
+    if (!form.email.trim()) newErrors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Invalid email format';
+
     if (!form.password) newErrors.password = 'Password is required';
     else if (form.password.length < 8) newErrors.password = 'Minimum 8 characters';
-    if (!form.fullName) newErrors.fullName = 'Full name is required';
+    else if (!/(?=.*[A-Z])/.test(form.password)) newErrors.password = 'Must contain at least one uppercase letter';
+    else if (!/(?=.*[a-z])/.test(form.password)) newErrors.password = 'Must contain at least one lowercase letter';
+    else if (!/(?=.*\d)/.test(form.password)) newErrors.password = 'Must contain at least one number';
+
+    if (!form.fullName.trim()) newErrors.fullName = 'Full name is required';
+
     if (!agreeTerms) newErrors.agreeTerms = 'You must agree to the terms';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -37,20 +55,23 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
     setLoading(true);
     try {
       await register(form);
+      // register() already shows success toast in AuthContext
       navigate('/');
     } catch (error) {
-      toast.error(error.message || 'Registration failed');
+      // Error message is already shown in AuthContext via toast
+      console.error('Registration error:', error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
-      <motion.div 
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-dark-950">
+      <motion.div
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -64,7 +85,10 @@ const Register = () => {
           <p className="text-gray-400 text-sm mt-1">Join the fun and start winning!</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-dark-700/50 shadow-2xl space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-dark-700/50 shadow-2xl space-y-4"
+        >
           {/* Username */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Username</label>
@@ -77,7 +101,9 @@ const Register = () => {
                 onChange={handleChange}
                 placeholder="Choose a username"
                 className={`w-full pl-10 pr-4 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all backdrop-blur-sm ${
-                  errors.username ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
+                  errors.username
+                    ? 'border-red-500 focus:ring-red-500/20'
+                    : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
                 }`}
               />
             </div>
@@ -96,7 +122,9 @@ const Register = () => {
                 onChange={handleChange}
                 placeholder="your@email.com"
                 className={`w-full pl-10 pr-4 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all backdrop-blur-sm ${
-                  errors.email ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
+                  errors.email
+                    ? 'border-red-500 focus:ring-red-500/20'
+                    : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
                 }`}
               />
             </div>
@@ -113,13 +141,15 @@ const Register = () => {
               onChange={handleChange}
               placeholder="Your full name"
               className={`w-full px-4 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all backdrop-blur-sm ${
-                errors.fullName ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
+                errors.fullName
+                  ? 'border-red-500 focus:ring-red-500/20'
+                  : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
               }`}
             />
             {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
           </div>
 
-          {/* Phone */}
+          {/* Phone (optional) */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Phone (optional)</label>
             <div className="relative">
@@ -147,13 +177,16 @@ const Register = () => {
                 onChange={handleChange}
                 placeholder="Create a password"
                 className={`w-full pl-10 pr-12 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all backdrop-blur-sm ${
-                  errors.password ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
+                  errors.password
+                    ? 'border-red-500 focus:ring-red-500/20'
+                    : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+                tabIndex="-1"
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
@@ -170,26 +203,39 @@ const Register = () => {
               className="mt-1 w-4 h-4 rounded border-dark-600 bg-dark-700 text-primary-500 focus:ring-primary-500/20"
             />
             <label className="text-sm text-gray-400">
-              I agree to the <Link to="/terms" className="text-primary-500 hover:text-primary-400">Terms of Service</Link> and <Link to="/privacy" className="text-primary-500 hover:text-primary-400">Privacy Policy</Link>
+              I agree to the{' '}
+              <Link to="/terms" className="text-primary-500 hover:text-primary-400">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-primary-500 hover:text-primary-400">
+                Privacy Policy
+              </Link>
             </label>
           </div>
           {errors.agreeTerms && <p className="text-red-500 text-xs">{errors.agreeTerms}</p>}
 
-          {/* Submit */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 font-bold rounded-xl hover:shadow-lg hover:shadow-primary-500/25 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
           >
             {loading ? (
-              <><span className="w-5 h-5 border-2 border-dark-900/30 border-t-dark-900 rounded-full animate-spin"></span> Creating...</>
+              <>
+                <span className="w-5 h-5 border-2 border-dark-900/30 border-t-dark-900 rounded-full animate-spin"></span>
+                Creating...
+              </>
             ) : (
-              'Create Account'
+              'Register'
             )}
           </button>
 
           <p className="text-center text-sm text-gray-400 mt-2">
-            Already have an account? <Link to="/login" className="text-primary-500 hover:text-primary-400 font-medium transition">Sign in</Link>
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary-500 hover:text-primary-400 font-medium transition">
+              Sign In
+            </Link>
           </p>
         </form>
       </motion.div>
