@@ -13,8 +13,12 @@ export const useNotification = () => {
 
     // Show toast
     switch (type) {
-      case 'success': toast.success(message); break;
-      case 'error': toast.error(message); break;
+      case 'success':
+        toast.success(message);
+        break;
+      case 'error':
+        toast.error(message);
+        break;
       case 'warning':
         toast.custom((t) => (
           <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} bg-yellow-500 text-black px-4 py-3 rounded-lg shadow-lg`}>
@@ -22,7 +26,8 @@ export const useNotification = () => {
           </div>
         ));
         break;
-      default: toast(message);
+      default:
+        toast(message);
     }
 
     if (duration > 0) {
