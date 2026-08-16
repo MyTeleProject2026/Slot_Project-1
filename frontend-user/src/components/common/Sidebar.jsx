@@ -3,17 +3,30 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   FaHome, FaGamepad, FaGift, FaWallet, FaUser, 
   FaSignOutAlt, FaHistory, FaTrophy, FaUsers, FaHeadset,
-  FaCrown, FaFire, FaDice
+  FaCrown, FaFire, FaDice, FaSync
 } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
+import { useGames } from '../../hooks/useGames';
+import toast from 'react-hot-toast';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { balance } = useWallet();
+  const { clearCache, fetchGames, fetchProviders } = useGames();
   const location = useLocation();
 
   const isActive = (path) => location.pathname === path;
+
+  const handleClearCache = async () => {
+    if (clearCache) {
+      clearCache();
+    }
+    // Also refetch data to refresh the UI
+    await fetchGames();
+    await fetchProviders();
+    toast.success('Cache cleared & data refreshed!');
+  };
 
   const menuItems = [
     { path: '/', icon: FaHome, label: 'Home' },
@@ -91,6 +104,16 @@ const Sidebar = ({ isOpen, onClose }) => {
             <FaSignOutAlt /> <span className="font-medium">Logout</span>
           </button>
         )}
+        
+        {/* Cache Clear Button */}
+        <button
+          onClick={handleClearCache}
+          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-xl text-gray-400 hover:bg-primary-500/10 hover:text-primary-400 transition-all hover:translate-x-1 group"
+        >
+          <FaSync className="text-sm group-hover:rotate-180 transition-transform duration-500" />
+          <span className="font-medium text-sm">Clear Cache & Refresh</span>
+        </button>
+
         <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
           <span className="px-2 py-1 rounded-full bg-primary-500/10 text-primary-500">🔒 Secure</span>
           <span className="px-2 py-1 rounded-full bg-green-500/10 text-green-400">🟢 Live</span>
