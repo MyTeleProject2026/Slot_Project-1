@@ -58,10 +58,8 @@ const Register = () => {
     setLoading(true);
     try {
       await register(form);
-      // AuthContext shows toast on success
       navigate('/');
     } catch (error) {
-      // Error message already shown in AuthContext
       console.error('Registration error:', error);
     } finally {
       setLoading(false);
@@ -69,7 +67,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-dark-950">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-8">
       <motion.div
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 20 }}
@@ -77,18 +75,17 @@ const Register = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-500 to-orange-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
-            <FaUserCircle className="text-4xl text-dark-900" />
+          <div className="w-16 md:w-20 h-16 md:h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary-500 to-orange-500 flex items-center justify-center shadow-lg shadow-primary-500/25">
+            <FaUserCircle className="text-3xl md:text-4xl text-dark-900" />
           </div>
-          <h1 className="text-2xl font-bold gradient-text">Create Account</h1>
+          <h1 className="text-2xl md:text-3xl font-bold gradient-text">Create Account</h1>
           <p className="text-gray-400 text-sm mt-1">Join the fun and start winning!</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-dark-700/50 shadow-2xl space-y-4"
+          className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-dark-700/50 shadow-2xl space-y-4"
         >
-          {/* Username */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Username</label>
             <div className="relative">
@@ -109,7 +106,6 @@ const Register = () => {
             {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
           </div>
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
             <div className="relative">
@@ -130,7 +126,6 @@ const Register = () => {
             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
-          {/* Full Name */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name</label>
             <input
@@ -148,7 +143,6 @@ const Register = () => {
             {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
           </div>
 
-          {/* Phone (optional) */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Phone (optional)</label>
             <div className="relative">
@@ -164,7 +158,6 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
             <div className="relative">
@@ -193,7 +186,6 @@ const Register = () => {
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
           </div>
 
-          {/* Terms */}
           <div className="flex items-start gap-2">
             <input
               type="checkbox"
@@ -214,7 +206,6 @@ const Register = () => {
           </div>
           {errors.agreeTerms && <p className="text-red-500 text-xs">{errors.agreeTerms}</p>}
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
