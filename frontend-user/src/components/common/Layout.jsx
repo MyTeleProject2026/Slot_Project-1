@@ -22,8 +22,8 @@ class ComponentErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '8px', background: 'red', color: 'white', textAlign: 'center' }}>
-          ⚠️ {this.props.name} crashed. Check console.
+        <div style={{ padding: '8px', background: 'rgba(255,0,0,0.2)', color: '#ff6b6b', textAlign: 'center', border: '1px solid rgba(255,0,0,0.3)', borderRadius: '8px', margin: '4px' }}>
+          ⚠️ {this.props.name} crashed. Check console for details.
         </div>
       );
     }
