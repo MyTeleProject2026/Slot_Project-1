@@ -23,7 +23,7 @@ const FloatingButtons = () => {
         </Link>
       )}
       <a href="https://wa.me/yournumber" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-        <FaWhatsApp className="text-2xl" />
+        <FaWhatsapp className="text-2xl" />
       </a>
       <a href="https://t.me/yourusername" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
         <FaTelegram className="text-2xl" />
