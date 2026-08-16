@@ -55,7 +55,7 @@ class ErrorBoundary extends Component {
 }
 
 // ============================================================
-// Lazy-loaded pages – these are your REAL page components
+// Lazy-loaded pages – THESE ARE YOUR REAL PAGE COMPONENTS
 // ============================================================
 const Home = lazy(() => import('./pages/Home'));
 const Games = lazy(() => import('./pages/Games'));
