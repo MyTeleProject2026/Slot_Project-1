@@ -8,7 +8,35 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/common/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
-// Lazy-loaded pages for code splitting
+// ---- ErrorBoundary defined BEFORE App ----
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'white', background: '#1a1a2e', minHeight: '100vh' }}>
+          <h1>Something went wrong</h1>
+          <pre style={{ color: 'red', whiteSpace: 'pre-wrap' }}>{this.state.error?.message}</pre>
+          <button onClick={() => window.location.reload()} style={{ padding: '8px 16px', background: '#f1c40f', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Lazy-loaded pages
 const Home = lazy(() => import('./pages/Home'));
 const Games = lazy(() => import('./pages/Games'));
 const Slots = lazy(() => import('./pages/Slots'));
@@ -38,78 +66,58 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <WalletProvider>
-          <GameProvider>
-            <Router>
-              <Toaster
-                position="top-center"
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    background: '#1a1a2e',
-                    color: '#fff',
-                    borderRadius: '12px',
-                  },
-                  success: {
-                    iconTheme: { primary: '#4ade80', secondary: '#1a1a2e' },
-                  },
-                  error: {
-                    iconTheme: { primary: '#ef4444', secondary: '#1a1a2e' },
-                  },
-                }}
-              />
-              <Layout>
-                <Suspense fallback={<LoadingSpinner fullScreen />}>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/games" element={<Games />} />
-                    <Route path="/games/slots" element={<Slots />} />
-                    <Route path="/games/live-casino" element={<LiveCasino />} />
-                    <Route path="/games/sports" element={<Sports />} />
-                    <Route path="/games/fishing" element={<Fishing />} />
-                    <Route path="/games/lotto" element={<Lotto />} />
-                    <Route path="/promotions" element={<Promotions />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/wallet" element={<Wallet />} />
-                    <Route path="/wallet/deposit" element={<Deposit />} />
-                    <Route path="/wallet/withdraw" element={<Withdraw />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </Layout>
-            </Router>
-          </GameProvider>
-        </WalletProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    // ✅ Wrap everything with ErrorBoundary
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <WalletProvider>
+            <GameProvider>
+              <Router>
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
+                    duration: 3000,
+                    style: {
+                      background: '#1a1a2e',
+                      color: '#fff',
+                      borderRadius: '12px',
+                    },
+                    success: {
+                      iconTheme: { primary: '#4ade80', secondary: '#1a1a2e' },
+                    },
+                    error: {
+                      iconTheme: { primary: '#ef4444', secondary: '#1a1a2e' },
+                    },
+                  }}
+                />
+                <Layout>
+                  <Suspense fallback={<LoadingSpinner fullScreen />}>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/games" element={<Games />} />
+                      <Route path="/games/slots" element={<Slots />} />
+                      <Route path="/games/live-casino" element={<LiveCasino />} />
+                      <Route path="/games/sports" element={<Sports />} />
+                      <Route path="/games/fishing" element={<Fishing />} />
+                      <Route path="/games/lotto" element={<Lotto />} />
+                      <Route path="/promotions" element={<Promotions />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/wallet" element={<Wallet />} />
+                      <Route path="/wallet/deposit" element={<Deposit />} />
+                      <Route path="/wallet/withdraw" element={<Withdraw />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </Layout>
+              </Router>
+            </GameProvider>
+          </WalletProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: '20px', color: 'white', background: '#1a1a2e' }}>
-          <h1>Something went wrong</h1>
-          <pre style={{ color: 'red' }}>{this.state.error?.message}</pre>
-          <button onClick={() => window.location.reload()}>Reload</button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+
 export default App;
