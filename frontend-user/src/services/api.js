@@ -1,13 +1,17 @@
 import axios from 'axios';
 
+// Use environment variable or fallback to your backend URL
 const API_URL = import.meta.env.VITE_API_URL || 'https://testing-backend-deploy-epvl.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
   timeout: 30000,
 });
 
+// Request interceptor - add token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -16,9 +20,13 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
 );
 
+// Response interceptor - handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
