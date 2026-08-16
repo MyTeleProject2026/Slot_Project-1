@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// ✅ Use environment variable; do NOT hardcode the URL here
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+//const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = 'https://testing-backend-deploy-epvl.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_URL,
