@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { gameService } from '../services/gameService';
+import { gameService, clearCache } from '../services/gameService';
 import toast from 'react-hot-toast';
 
 const GameContext = createContext();
@@ -27,6 +27,7 @@ export const useGames = () => {
       toggleFavorite: () => {},
       isFavorite: () => false,
       setActiveGame: () => {},
+      clearCache: () => {},
     };
   }
   return context;
@@ -40,6 +41,7 @@ export const GameProvider = ({ children }) => {
   const [favorites, setFavorites] = useState([]);
   const [activeGame, setActiveGame] = useState(null);
   const [error, setError] = useState(null);
+  const [isFetching, setIsFetching] = useState(false);
 
   const categories = [
     { id: 'slots', name: 'Slots', icon: '🎰' },
@@ -48,13 +50,14 @@ export const GameProvider = ({ children }) => {
     { id: 'fishing', name: 'Fishing', icon: '🎣' },
     { id: 'lotto', name: 'Lotto', icon: '🎱' },
   ];
-  
-  // Add a flag to prevent multiple simultaneous calls  
-  let isFetching = false;
 
   const fetchGames = async (params = {}) => {
-    if (isFetching) return []; // Prevent duplicate calls
-    isFetching = true;
+    // Prevent duplicate simultaneous calls
+    if (isFetching) {
+      console.log('⏳ Already fetching games, skipping duplicate call');
+      return [];
+    }
+    setIsFetching(true);
     setLoading(true);
     setError(null);
     try {
@@ -64,15 +67,21 @@ export const GameProvider = ({ children }) => {
       return gamesData;
     } catch (error) {
       console.error('Fetch games error:', error);
-      setError('Failed to load games. Please refresh.');
+      // Check if it's a 429 error
+      if (error.response?.status === 429) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else {
+        setError('Failed to load games. Please refresh.');
+      }
+      toast.error('Failed to load games');
       setGames([]);
       return [];
     } finally {
       setLoading(false);
-      isFetching = false;
+      setIsFetching(false);
     }
   };
-  
+
   const fetchProviders = async () => {
     try {
       const data = await gameService.getProviders();
@@ -178,6 +187,11 @@ export const GameProvider = ({ children }) => {
 
   const isFavorite = (gameId) => favorites.includes(gameId);
 
+  const clearCache = () => {
+    gameService.clearCache?.();
+    console.log('🧹 Cache cleared from context');
+  };
+
   // Load favorites from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('favorites');
@@ -186,13 +200,16 @@ export const GameProvider = ({ children }) => {
     }
   }, []);
 
-  // In GameContext.jsx - initial fetch
+  // Initial fetch - only once
   useEffect(() => {
     let mounted = true;
-    if (mounted) {
-      fetchGames();
-      fetchProviders();
-    }
+    const loadData = async () => {
+      if (mounted) {
+        await fetchGames();
+        await fetchProviders();
+      }
+    };
+    loadData();
     return () => { mounted = false; };
   }, []);
 
@@ -215,6 +232,7 @@ export const GameProvider = ({ children }) => {
     toggleFavorite,
     isFavorite,
     setActiveGame,
+    clearCache,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
