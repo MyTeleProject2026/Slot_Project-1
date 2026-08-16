@@ -111,4 +111,56 @@ const Navbar = ({ onMenuClick }) => {
                         onClick={handleLogout} 
                         className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-red-500/10 transition-all text-red-400"
                       >
-                        <FaSignOutAlt /> <span>Logout</span
+                        <FaSignOutAlt /> <span>Logout</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-1 md:gap-2">
+                <Link 
+                  to="/login" 
+                  className="px-3 md:px-4 py-1.5 text-xs md:text-sm font-medium text-white hover:text-primary-500 transition-all"
+                >
+                  Login
+                </Link>
+                <Link 
+                  to="/register" 
+                  className="px-3 md:px-4 py-1.5 text-xs md:text-sm font-medium bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full hover:shadow-lg hover:shadow-primary-500/30 transition-all hover:scale-105"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Search Bar */}
+        {isSearchOpen && (
+          <div className="md:hidden py-3 border-t border-dark-800/50">
+            <form onSubmit={handleSearch} className="relative">
+              <input 
+                type="text" 
+                placeholder="Search games..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-dark-800/80 text-white text-sm rounded-full px-4 py-2 pl-11 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all backdrop-blur-sm border border-dark-700/50 focus:border-primary-500"
+              />
+              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm" />
+              <button 
+                type="button"
+                onClick={() => setIsSearchOpen(false)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition"
+              >
+                <FaTimes className="text-sm" />
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+};
+
+export default Navbar;
