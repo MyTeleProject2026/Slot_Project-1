@@ -8,7 +8,6 @@ const GameContext = createContext();
 export const useGames = () => {
   const context = useContext(GameContext);
   if (!context) {
-    // Return safe defaults
     return {
       games: [],
       providers: [],
@@ -34,7 +33,7 @@ export const useGames = () => {
 };
 
 export const GameProvider = ({ children }) => {
-  const { isAuthenticated, api } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [games, setGames] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,25 +49,11 @@ export const GameProvider = ({ children }) => {
     { id: 'lotto', name: 'Lotto', icon: '🎱' },
   ];
 
-  // SAFE: Check if api is available
-  const checkApi = () => {
-    if (!api) {
-      console.warn('API instance not available');
-      return false;
-    }
-    return true;
-  };
-
   const fetchGames = async (params = {}) => {
-    if (!checkApi()) {
-      setGames([]);
-      setError('API not available');
-      return [];
-    }
     setLoading(true);
     setError(null);
     try {
-      const data = await gameService.getGames(api, params);
+      const data = await gameService.getGames(params);
       const gamesData = data?.games || [];
       setGames(gamesData);
       return gamesData;
@@ -84,12 +69,8 @@ export const GameProvider = ({ children }) => {
   };
 
   const fetchProviders = async () => {
-    if (!checkApi()) {
-      setProviders([]);
-      return [];
-    }
     try {
-      const data = await gameService.getProviders(api);
+      const data = await gameService.getProviders();
       const providersData = data?.providers || [];
       setProviders(providersData);
       return providersData;
@@ -101,11 +82,10 @@ export const GameProvider = ({ children }) => {
   };
 
   const searchGames = async (query) => {
-    if (!checkApi()) return [];
     if (!query?.trim()) return fetchGames();
     setLoading(true);
     try {
-      const data = await gameService.searchGames(api, query);
+      const data = await gameService.searchGames(query);
       const gamesData = data?.games || [];
       setGames(gamesData);
       return gamesData;
@@ -119,10 +99,9 @@ export const GameProvider = ({ children }) => {
   };
 
   const getGamesByProvider = async (provider) => {
-    if (!checkApi()) return [];
     setLoading(true);
     try {
-      const data = await gameService.getGamesByProvider(api, provider);
+      const data = await gameService.getGamesByProvider(provider);
       const gamesData = data?.games || [];
       setGames(gamesData);
       return gamesData;
@@ -135,10 +114,9 @@ export const GameProvider = ({ children }) => {
   };
 
   const getGamesByCategory = async (category) => {
-    if (!checkApi()) return [];
     setLoading(true);
     try {
-      const data = await gameService.getGamesByCategory(api, category);
+      const data = await gameService.getGamesByCategory(category);
       const gamesData = data?.games || [];
       setGames(gamesData);
       return gamesData;
@@ -155,9 +133,8 @@ export const GameProvider = ({ children }) => {
       toast.error('Please login to play');
       return null;
     }
-    if (!checkApi()) return null;
     try {
-      const data = await gameService.startGame(api, { gameId, betAmount, selectedLines });
+      const data = await gameService.startGame({ gameId, betAmount, selectedLines });
       setActiveGame(data?.session);
       return data;
     } catch (error) {
@@ -167,9 +144,8 @@ export const GameProvider = ({ children }) => {
   };
 
   const spin = async (sessionId, betAmount, selectedLines) => {
-    if (!checkApi()) return null;
     try {
-      const data = await gameService.spin(api, { sessionId, betAmount, selectedLines });
+      const data = await gameService.spin({ sessionId, betAmount, selectedLines });
       return data;
     } catch (error) {
       toast.error(error.response?.data?.error || 'Spin failed');
@@ -178,9 +154,8 @@ export const GameProvider = ({ children }) => {
   };
 
   const collectWin = async (sessionId) => {
-    if (!checkApi()) return null;
     try {
-      const data = await gameService.collectWin(api, { sessionId });
+      const data = await gameService.collectWin({ sessionId });
       return data;
     } catch (error) {
       console.error('Collect win error:', error);
