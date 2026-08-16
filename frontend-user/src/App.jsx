@@ -52,7 +52,7 @@ class ErrorBoundary extends Component {
 }
 
 // ============================================================
-// Simple Layout
+// Simple Layout with React Router Links
 // ============================================================
 const SimpleLayout = ({ children }) => {
   return (
@@ -77,7 +77,7 @@ const SimpleLayout = ({ children }) => {
 };
 
 // ============================================================
-// Pages (hardcoded)
+// Hardcoded Pages (for testing)
 // ============================================================
 const HomePage = () => (
   <div style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -150,8 +150,9 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <Router>
+        {/* Router MUST be above AuthProvider so useNavigate works */}
+        <Router>
+          <AuthProvider>
             <Toaster
               position="top-center"
               toastOptions={{
@@ -174,8 +175,8 @@ function App() {
                 </Routes>
               </Suspense>
             </SimpleLayout>
-          </Router>
-        </AuthProvider>
+          </AuthProvider>
+        </Router>
       </ThemeProvider>
     </ErrorBoundary>
   );
