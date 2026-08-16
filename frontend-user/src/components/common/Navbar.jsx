@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaBars, FaUser, FaWallet, FaSignOutAlt, FaSearch } from 'react-icons/fa';
+import { FaBars, FaUser, FaWallet, FaSignOutAlt, FaSearch, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
 
@@ -10,6 +10,7 @@ const Navbar = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -20,12 +21,13 @@ const Navbar = ({ onMenuClick }) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/games?search=${encodeURIComponent(searchQuery)}`);
+      setIsSearchOpen(false);
     }
   };
 
   return (
     <nav className="sticky top-0 z-40 bg-dark-900/95 backdrop-blur-xl border-b border-dark-800/50 shadow-lg">
-      <div className="container mx-auto px-3">
+      <div className="container mx-auto">
         <div className="flex items-center justify-between h-14 md:h-16">
           {/* Left */}
           <div className="flex items-center gap-2">
@@ -59,6 +61,15 @@ const Navbar = ({ onMenuClick }) => {
 
           {/* Right */}
           <div className="flex items-center gap-2 md:gap-4">
+            {/* Mobile Search Toggle */}
+            <button 
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="md:hidden p-2 text-gray-400 hover:text-white transition"
+              aria-label="Search"
+            >
+              <FaSearch className="text-lg" />
+            </button>
+
             {isAuthenticated ? (
               <>
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-primary-500/10 rounded-full border border-primary-500/30 backdrop-blur-sm">
@@ -100,33 +111,4 @@ const Navbar = ({ onMenuClick }) => {
                         onClick={handleLogout} 
                         className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-red-500/10 transition-all text-red-400"
                       >
-                        <FaSignOutAlt /> <span>Logout</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link 
-                  to="/login" 
-                  className="px-4 py-1.5 text-sm font-medium text-white hover:text-primary-500 transition-all"
-                >
-                  Login
-                </Link>
-                <Link 
-                  to="/register" 
-                  className="px-4 py-1.5 text-sm font-medium bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full hover:shadow-lg hover:shadow-primary-500/30 transition-all hover:scale-105"
-                >
-                  Register
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </nav>
-  );
-};
-
-export default Navbar;
+                        <FaSignOutAlt /> <span>Logout</span
