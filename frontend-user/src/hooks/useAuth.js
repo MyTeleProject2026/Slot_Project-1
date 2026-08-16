@@ -4,13 +4,12 @@ import AuthContext from '../contexts/AuthContext';
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    // Return default values instead of throwing
     return {
       user: null,
       isAuthenticated: false,
       loading: false,
-      login: async () => {},
-      register: async () => {},
+      login: async () => ({ success: false }),
+      register: async () => ({ success: false }),
       logout: () => {},
       api: null,
     };
