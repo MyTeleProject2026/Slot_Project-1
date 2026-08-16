@@ -8,25 +8,42 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/common/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
-// ---- ErrorBoundary defined BEFORE App ----
+// ============================================================
+// IMPROVED ERROR BOUNDARY – shows the actual error message
+// ============================================================
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
+
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
+
   componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    console.error('❌ ErrorBoundary caught:', error, errorInfo);
+    this.setState({ errorInfo });
   }
+
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', color: 'white', background: '#1a1a2e', minHeight: '100vh' }}>
-          <h1>Something went wrong</h1>
-          <pre style={{ color: 'red', whiteSpace: 'pre-wrap' }}>{this.state.error?.message}</pre>
-          <button onClick={() => window.location.reload()} style={{ padding: '8px 16px', background: '#f1c40f', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+        <div style={{ padding: '20px', color: '#fff', background: '#1a1a2e', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+          <h1 style={{ color: '#f1c40f' }}>⚠️ Something went wrong</h1>
+          <pre style={{ color: '#ff6b6b', whiteSpace: 'pre-wrap', background: '#2d2d44', padding: '12px', borderRadius: '8px' }}>
+            {this.state.error?.toString() || 'Unknown error'}
+          </pre>
+          <details style={{ marginTop: '12px' }}>
+            <summary style={{ cursor: 'pointer', color: '#aaa' }}>Component Stack</summary>
+            <pre style={{ color: '#aaa', whiteSpace: 'pre-wrap', background: '#2d2d44', padding: '12px', borderRadius: '8px', fontSize: '12px' }}>
+              {this.state.errorInfo?.componentStack || 'No stack available'}
+            </pre>
+          </details>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ marginTop: '16px', padding: '8px 20px', background: '#f1c40f', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+          >
             Reload
           </button>
         </div>
@@ -36,7 +53,9 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Lazy-loaded pages
+// ============================================================
+// Lazy-loaded pages (code splitting)
+// ============================================================
 const Home = lazy(() => import('./pages/Home'));
 const Games = lazy(() => import('./pages/Games'));
 const Slots = lazy(() => import('./pages/Slots'));
@@ -53,6 +72,9 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+// ============================================================
+// Main App Component
+// ============================================================
 function App() {
   // Fix mobile viewport height
   React.useEffect(() => {
@@ -66,7 +88,7 @@ function App() {
   }, []);
 
   return (
-    // ✅ Wrap everything with ErrorBoundary
+    // ✅ ErrorBoundary wraps everything so we catch all errors
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
