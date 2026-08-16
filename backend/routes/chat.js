@@ -4,12 +4,11 @@ const chatController = require('../controllers/chatController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
 
-// User routes
 router.get('/messages', authenticate, chatController.getUserMessages);
 router.post('/send', authenticate, chatController.sendMessage);
 router.put('/read/:id', authenticate, chatController.markAsRead);
 
-// Admin routes (requires admin or higher)
+// Admin routes
 router.use('/admin', authenticate);
 router.use('/admin', authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN));
 router.get('/admin/pending', chatController.getPendingMessages);
