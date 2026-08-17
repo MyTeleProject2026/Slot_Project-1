@@ -44,7 +44,7 @@ const Navbar = ({ onMenuClick }) => {
             <Link to="/" className="flex items-center gap-2 group">
               <img 
                 src="/assets/logo.png" 
-                alt="FattBet" 
+                alt="N999" 
                 className="h-8 md:h-10 w-auto transition-all group-hover:scale-105" 
               />
             </Link>
