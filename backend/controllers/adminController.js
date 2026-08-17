@@ -201,52 +201,110 @@ exports.adjustWinRate = async (req, res) => {
 };
 
 // ============================================================
-// DASHBOARD STATS
+// DASHBOARD STATS - WITH FULL ERROR HANDLING
 // ============================================================
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const [userCount] = await pool.query('SELECT COUNT(*) as total FROM users WHERE role = "user"');
-    const [txStats] = await pool.query(`
-      SELECT COUNT(*) as total_transactions,
-             SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending,
-             SUM(CASE WHEN type='deposit' AND status='completed' THEN amount ELSE 0 END) as total_deposits,
-             SUM(CASE WHEN type='withdraw' AND status='completed' THEN amount ELSE 0 END) as total_withdrawals
-      FROM user_transactions
-    `);
-    const [walletStats] = await pool.query(`
-      SELECT SUM(main_balance) as total_main,
-             SUM(bonus_balance) as total_bonus,
-             SUM(commission_balance) as total_commission
-      FROM wallets
-    `);
-    const [online] = await pool.query('SELECT COUNT(*) as online FROM users WHERE last_login > DATE_SUB(NOW(), INTERVAL 5 MINUTE)');
-    const [recent] = await pool.query(`
-      SELECT t.*, u.username FROM user_transactions t
-      LEFT JOIN users u ON t.user_id = u.id
-      ORDER BY t.created_at DESC LIMIT 10
-    `);
-    res.json({
-      success: true,
+    // Initialize default stats
+    let stats = {
+      totalUsers: 0,
+      onlineUsers: 0,
+      transactions: {
+        total: 0,
+        pending: 0,
+        totalDeposits: 0,
+        totalWithdrawals: 0
+      },
+      balances: {
+        main: 0,
+        bonus: 0,
+        commission: 0
+      },
+      recentTransactions: []
+    };
+
+    // User count
+    try {
+      const [rows] = await pool.query('SELECT COUNT(*) as total FROM users WHERE role = "user"');
+      stats.totalUsers = rows[0]?.total || 0;
+    } catch (err) {
+      console.error('User count query error:', err.message);
+    }
+
+    // Transaction stats
+    try {
+      const [rows] = await pool.query(`
+        SELECT COUNT(*) as total_transactions,
+               SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending,
+               SUM(CASE WHEN type='deposit' AND status='completed' THEN amount ELSE 0 END) as total_deposits,
+               SUM(CASE WHEN type='withdraw' AND status='completed' THEN amount ELSE 0 END) as total_withdrawals
+        FROM user_transactions
+      `);
+      const tx = rows[0] || {};
+      stats.transactions = {
+        total: tx.total_transactions || 0,
+        pending: tx.pending || 0,
+        totalDeposits: parseFloat(tx.total_deposits || 0),
+        totalWithdrawals: parseFloat(tx.total_withdrawals || 0)
+      };
+    } catch (err) {
+      console.error('Transaction stats query error:', err.message);
+    }
+
+    // Wallet balances
+    try {
+      const [rows] = await pool.query(`
+        SELECT SUM(main_balance) as total_main,
+               SUM(bonus_balance) as total_bonus,
+               SUM(commission_balance) as total_commission
+        FROM wallets
+      `);
+      const w = rows[0] || {};
+      stats.balances = {
+        main: parseFloat(w.total_main || 0),
+        bonus: parseFloat(w.total_bonus || 0),
+        commission: parseFloat(w.total_commission || 0)
+      };
+    } catch (err) {
+      console.error('Wallet stats query error:', err.message);
+    }
+
+    // Online users
+    try {
+      const [rows] = await pool.query('SELECT COUNT(*) as online FROM users WHERE last_login > DATE_SUB(NOW(), INTERVAL 5 MINUTE)');
+      stats.onlineUsers = rows[0]?.online || 0;
+    } catch (err) {
+      console.error('Online users query error:', err.message);
+    }
+
+    // Recent transactions
+    try {
+      const [rows] = await pool.query(`
+        SELECT t.*, u.username FROM user_transactions t
+        LEFT JOIN users u ON t.user_id = u.id
+        ORDER BY t.created_at DESC LIMIT 10
+      `);
+      stats.recentTransactions = rows;
+    } catch (err) {
+      console.error('Recent transactions query error:', err.message);
+    }
+
+    // Return the stats with success
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Fatal error in getDashboardStats:', error);
+    // Return a minimal safe response
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load dashboard stats',
       stats: {
-        totalUsers: userCount[0]?.total || 0,
-        onlineUsers: online[0]?.online || 0,
-        transactions: {
-          total: txStats[0]?.total_transactions || 0,
-          pending: txStats[0]?.pending || 0,
-          totalDeposits: parseFloat(txStats[0]?.total_deposits || 0),
-          totalWithdrawals: parseFloat(txStats[0]?.total_withdrawals || 0)
-        },
-        balances: {
-          main: parseFloat(walletStats[0]?.total_main || 0),
-          bonus: parseFloat(walletStats[0]?.total_bonus || 0),
-          commission: parseFloat(walletStats[0]?.total_commission || 0)
-        },
-        recentTransactions: recent
+        totalUsers: 0,
+        onlineUsers: 0,
+        transactions: { total: 0, pending: 0, totalDeposits: 0, totalWithdrawals: 0 },
+        balances: { main: 0, bonus: 0, commission: 0 },
+        recentTransactions: []
       }
     });
-  } catch (error) {
-    console.error('Get dashboard stats error:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch dashboard stats' });
   }
 };
