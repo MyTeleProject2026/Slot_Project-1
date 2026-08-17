@@ -4,6 +4,10 @@ const Transaction = require('../models/Transaction');
 const Game = require('../models/Game');
 const pool = require('../config/database');
 
+// ============================================================
+// EMPLOYEE USER MANAGEMENT
+// ============================================================
+
 exports.getUsers = async (req, res) => {
   try {
     const users = await User.getAll(req.query);
@@ -39,6 +43,10 @@ exports.updateUserStatus = async (req, res) => {
   }
 };
 
+// ============================================================
+// EMPLOYEE TRANSACTION MANAGEMENT
+// ============================================================
+
 exports.getTransactions = async (req, res) => {
   try {
     const { limit = 50, offset = 0 } = req.query;
@@ -57,12 +65,8 @@ exports.approveTransaction = async (req, res) => {
   try {
     const { id } = req.params;
     const tx = await Transaction.findById(id);
-    // ✅ Added better validation
-    if (!tx) {
-      return res.status(404).json({ success: false, error: 'Transaction not found' });
-    }
-    if (tx.status !== 'pending') {
-      return res.status(400).json({ success: false, error: 'Transaction is not pending' });
+    if (!tx || tx.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Invalid transaction' });
     }
     await Transaction.updateStatus(id, 'completed', req.userId);
     if (tx.type === 'deposit') {
@@ -87,6 +91,10 @@ exports.rejectTransaction = async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to reject transaction' });
   }
 };
+
+// ============================================================
+// GAME CONTROL
+// ============================================================
 
 exports.adjustGameRTP = async (req, res) => {
   try {
