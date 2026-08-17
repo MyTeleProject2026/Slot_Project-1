@@ -4,6 +4,9 @@ const adminController = require('../controllers/adminController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
 
+// 🔍 DEBUG: Log the controller to verify it's loaded
+console.log('🔍 adminController methods:', Object.keys(adminController));
+
 // All routes require authentication and admin role
 router.use(authenticate);
 router.use(authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN));
