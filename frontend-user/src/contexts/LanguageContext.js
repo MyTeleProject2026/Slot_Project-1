@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { DEFAULT_LANGUAGE, LANGUAGES, translations, getTranslation } from '../utils/Languages';
+import { DEFAULT_LANGUAGE, LANGUAGES, translations, getTranslation } from '../utils/languages';
 
 const LanguageContext = createContext();
 
@@ -41,11 +41,10 @@ export const LanguageProvider = ({ children }) => {
     isMyanmar: language === LANGUAGES.MM,
   };
 
-  // Using React.createElement to bypass JSX parser issues
-  return React.createElement(
-    LanguageContext.Provider,
-    { value: value },
-    children
+  return (
+    <LanguageContext.Provider value={value}>
+      {children}
+    </LanguageContext.Provider>
   );
 };
 
