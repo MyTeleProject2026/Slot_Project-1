@@ -94,6 +94,46 @@ class Game {
     const [result] = await pool.query('UPDATE games SET total_wins = total_wins + 1 WHERE id = ?', [gameId]);
     return result.affectedRows > 0;
   }
+
+  // ✅ ADDED: Get all games
+  static async getAll() {
+    const [rows] = await pool.query(
+      'SELECT * FROM games ORDER BY sort_order ASC'
+    );
+    return rows;
+  }
+
+  // ✅ ADDED: Update a game
+  static async update(id, data) {
+    const fields = [];
+    const values = [];
+    const allowed = [
+      'provider_id', 'provider_name', 'game_code', 'name', 'category',
+      'sub_category', 'image_url', 'thumbnail_url', 'background_url',
+      'rtp', 'max_multiplier', 'min_bet', 'max_bet', 'volatility',
+      'is_hot', 'is_new', 'is_popular', 'play_url', 'demo_url',
+      'mobile_play_url', 'tags', 'features', 'theme', 'sort_order', 'status'
+    ];
+    for (const key of allowed) {
+      if (data[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(data[key]);
+      }
+    }
+    if (fields.length === 0) return false;
+    values.push(id);
+    const [result] = await pool.query(
+      `UPDATE games SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
+      values
+    );
+    return result.affectedRows > 0;
+  }
+
+  // ✅ ADDED: Delete a game
+  static async delete(id) {
+    const [result] = await pool.query('DELETE FROM games WHERE id = ?', [id]);
+    return result.affectedRows > 0;
+  }
 }
 
 module.exports = Game;
