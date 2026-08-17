@@ -53,7 +53,14 @@ const TransactionList = () => {
     { key: 'id', label: 'ID' },
     { key: 'user_name', label: 'User' },
     { key: 'type', label: 'Type' },
-    { key: 'amount', label: 'Amount', render: (value) => `฿${value?.toFixed(2)}` },
+    {
+      key: 'amount',
+      label: 'Amount',
+      render: (value) => {
+        const num = Number(value);
+        return isNaN(num) ? '0.00' : `฿${num.toFixed(2)}`;
+      }
+    },
     {
       key: 'status',
       label: 'Status',
@@ -68,7 +75,11 @@ const TransactionList = () => {
         </span>
       ),
     },
-    { key: 'created_at', label: 'Date', render: (value) => new Date(value).toLocaleDateString() },
+    {
+      key: 'created_at',
+      label: 'Date',
+      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A'
+    },
     {
       key: 'actions',
       label: 'Actions',
@@ -127,6 +138,16 @@ const TransactionList = () => {
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative max-w-md mb-4">
+          <input
+            type="text"
+            placeholder="Search transactions..."
+            className="w-full bg-dark-800/80 text-white rounded-xl px-4 py-2 pl-10 border border-dark-700/50 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 transition-all"
+          />
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
         </div>
 
         {/* Table */}
