@@ -1,12 +1,14 @@
-import api from './api'
+import api from './api';
 
-export async function login(credentials){
-  // placeholder
-  return api.post('/auth/login', credentials)
-}
+export const authService = {
+  login: (credentials) => api.post('/auth/login', credentials).then(res => res.data),
+  refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }).then(res => res.data),
+  getMe: () => api.get('/auth/me').then(res => res.data),
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+  },
+};
 
-export async function logout(){
-  return api.post('/auth/logout')
-}
-
-export default { login, logout }
+export default authService;
