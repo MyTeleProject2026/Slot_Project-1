@@ -7,6 +7,7 @@ exports.getProfile = async (req, res) => {
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     res.json({ success: true, user });
   } catch (error) {
+    console.error('Get profile error:', error);
     res.status(500).json({ success: false, error: 'Failed to get profile' });
   }
 };
@@ -17,7 +18,8 @@ exports.updateProfile = async (req, res) => {
     await User.update(req.userId, { fullName, phone });
     res.json({ success: true, message: 'Profile updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Update failed' });
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update profile' });
   }
 };
 
@@ -30,8 +32,9 @@ exports.changePassword = async (req, res) => {
     if (!valid) return res.status(400).json({ success: false, error: 'Old password incorrect' });
     const hashed = await bcrypt.hash(newPassword, 10);
     await User.update(req.userId, { password: hashed });
-    res.json({ success: true, message: 'Password changed' });
+    res.json({ success: true, message: 'Password changed successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Password change failed' });
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, error: 'Failed to change password' });
   }
 };
