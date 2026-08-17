@@ -47,6 +47,14 @@ class Promotion {
     return rows;
   }
 
+  // ✅ ADDED: Get all promotions (for admin)
+  static async getAll() {
+    const [rows] = await pool.query(
+      'SELECT * FROM promotions ORDER BY sort_order ASC, created_at DESC'
+    );
+    return rows;
+  }
+
   static async update(id, data) {
     const fields = [];
     const values = [];
