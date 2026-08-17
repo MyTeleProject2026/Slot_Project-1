@@ -1,18 +1,37 @@
-import { createContext, useState, useContext } from 'react'
+import React, { createContext, useState, useEffect, useContext } from 'react';
 
-const ThemeContext = createContext(null)
+const ThemeContext = createContext();
 
-export function ThemeProvider({ children }){
-  const [theme, setTheme] = useState('light')
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  )
-}
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider');
+  }
+  return context;
+};
 
-export function useThemeContext(){
-  return useContext(ThemeContext)
-}
+export const ThemeProvider = ({ children }) => {
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('admin-theme');
+    return saved || 'dark';
+  });
 
-export default ThemeContext
+  useEffect(() => {
+    localStorage.setItem('admin-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const value = {
+    theme,
+    toggleTheme,
+    isDark: theme === 'dark',
+  };
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+};
+
+export default ThemeContext;
