@@ -1,17 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/database');
+const Setting = require('../models/Setting');
 
 // Public settings (no auth required)
 router.get('/public', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      "SELECT setting_key, setting_value FROM settings WHERE is_public = 1"
-    );
-    const settings = {};
-    rows.forEach(row => {
-      settings[row.setting_key] = row.setting_value;
-    });
+    const settings = await Setting.getPublic();
     res.json({ success: true, settings });
   } catch (error) {
     console.error('Get public settings error:', error);
