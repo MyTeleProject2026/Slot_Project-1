@@ -27,6 +27,7 @@ exports.getAllProviders = async (req, res) => {
     const providers = await Provider.getWithGameCount();
     res.json({ success: true, providers });
   } catch (error) {
+    console.error('Get providers error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch providers' });
   }
 };
@@ -37,6 +38,7 @@ exports.getGameById = async (req, res) => {
     if (!game) return res.status(404).json({ success: false, error: 'Game not found' });
     res.json({ success: true, game });
   } catch (error) {
+    console.error('Get game by id error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch game' });
   }
 };
@@ -46,7 +48,13 @@ exports.startGame = async (req, res) => {
     const { gameId, betAmount, selectedLines } = req.body;
     const game = await Game.findById(gameId);
     if (!game) return res.status(404).json({ success: false, error: 'Game not found' });
-    const sessionData = await slotopolService.startGame(req.userId, game.provider_name, game.name, betAmount || 1, selectedLines || 20);
+    const sessionData = await slotopolService.startGame(
+      req.userId, 
+      game.provider_name, 
+      game.name, 
+      betAmount || 1, 
+      selectedLines || 20
+    );
     const sessionId = await GameSession.create({
       userId: req.userId,
       slotopolGameId: sessionData.gid,
@@ -68,8 +76,14 @@ exports.spin = async (req, res) => {
   try {
     const { sessionId, betAmount, selectedLines } = req.body;
     const session = await GameSession.findById(sessionId);
-    if (!session || session.user_id !== req.userId) return res.status(404).json({ success: false, error: 'Session not found' });
-    const spinResult = await slotopolService.spin(session.slotopol_game_id, betAmount || session.bet_amount, selectedLines || session.selected_lines);
+    if (!session || session.user_id !== req.userId) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+    const spinResult = await slotopolService.spin(
+      session.slotopol_game_id,
+      betAmount || session.bet_amount,
+      selectedLines || session.selected_lines
+    );
     await GameSession.updateState(sessionId, spinResult);
     res.json({ success: true, result: spinResult, wallet: spinResult.wallet });
   } catch (error) {
@@ -82,12 +96,14 @@ exports.collectWin = async (req, res) => {
   try {
     const { sessionId } = req.body;
     const session = await GameSession.findById(sessionId);
-    if (!session || session.user_id !== req.userId) return res.status(404).json({ success: false, error: 'Session not found' });
+    if (!session || session.user_id !== req.userId) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
     const result = await slotopolService.collect(session.slotopol_game_id);
     await GameSession.updateState(sessionId, result);
     res.json({ success: true, wallet: result.wallet });
   } catch (error) {
-    console.error('Collect error:', error);
+    console.error('Collect win error:', error);
     res.status(500).json({ success: false, error: 'Collect failed' });
   }
 };
