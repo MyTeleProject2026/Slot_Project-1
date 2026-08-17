@@ -13,6 +13,7 @@ exports.getBalance = async (req, res) => {
       total: parseFloat(wallet.main_balance) + parseFloat(wallet.bonus_balance) + parseFloat(wallet.commission_balance)
     } });
   } catch (error) {
+    console.error('Get balance error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch balance' });
   }
 };
@@ -36,6 +37,7 @@ exports.requestDeposit = async (req, res) => {
     });
     res.json({ success: true, transactionId: txId, message: 'Deposit request submitted' });
   } catch (error) {
+    console.error('Request deposit error:', error);
     res.status(500).json({ success: false, error: 'Deposit request failed' });
   }
 };
@@ -61,6 +63,7 @@ exports.requestWithdraw = async (req, res) => {
     });
     res.json({ success: true, transactionId: txId, message: 'Withdraw request submitted' });
   } catch (error) {
+    console.error('Request withdraw error:', error);
     res.status(500).json({ success: false, error: 'Withdraw request failed' });
   }
 };
@@ -71,6 +74,7 @@ exports.getTransactions = async (req, res) => {
     const transactions = await Transaction.findByUserId(req.userId, parseInt(limit), parseInt(offset));
     res.json({ success: true, transactions });
   } catch (error) {
+    console.error('Get transactions error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch transactions' });
   }
 };
@@ -81,6 +85,7 @@ exports.getBankAccounts = async (req, res) => {
     const [rows] = await pool.query('SELECT * FROM bank_accounts WHERE user_id = ? ORDER BY is_default DESC', [req.userId]);
     res.json({ success: true, bankAccounts: rows });
   } catch (error) {
+    console.error('Get bank accounts error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch bank accounts' });
   }
 };
@@ -100,6 +105,7 @@ exports.addBankAccount = async (req, res) => {
     );
     res.status(201).json({ success: true, id: result.insertId });
   } catch (error) {
+    console.error('Add bank account error:', error);
     res.status(500).json({ success: false, error: 'Failed to add bank account' });
   }
 };
@@ -118,9 +124,10 @@ exports.updateBankAccount = async (req, res) => {
       'UPDATE bank_accounts SET bank_name = ?, account_name = ?, account_number = ?, bank_code = ?, is_default = ? WHERE id = ? AND user_id = ?',
       [bankName, accountName, accountNumber, bankCode, isDefault || false, id, req.userId]
     );
-    res.json({ success: true, message: 'Updated' });
+    res.json({ success: true, message: 'Bank account updated' });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Update failed' });
+    console.error('Update bank account error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update bank account' });
   }
 };
 
@@ -130,8 +137,9 @@ exports.deleteBankAccount = async (req, res) => {
     const pool = require('../config/database');
     const [result] = await pool.query('DELETE FROM bank_accounts WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (result.affectedRows === 0) return res.status(404).json({ success: false, error: 'Account not found' });
-    res.json({ success: true, message: 'Deleted' });
+    res.json({ success: true, message: 'Bank account deleted' });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Delete failed' });
+    console.error('Delete bank account error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete bank account' });
   }
 };
