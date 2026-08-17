@@ -4,6 +4,40 @@ const Wallet = require('../models/Wallet');
 const { generateToken, generateRefreshToken } = require('../config/auth');
 const { ROLES } = require('../config/roles');
 
+// ============================================================
+// Environment-based Admin Authentication
+// ============================================================
+
+function getAdminFromEnv(username, password) {
+  const adminConfigs = [
+    { envUser: 'SUPER_ADMIN_USERNAME', envPass: 'SUPER_ADMIN_PASSWORD', role: ROLES.SUPER_ADMIN, id: 99991 },
+    { envUser: 'MAIN_ADMIN_USERNAME', envPass: 'MAIN_ADMIN_PASSWORD', role: ROLES.MAIN_ADMIN, id: 99992 },
+    { envUser: 'ADMIN_USERNAME', envPass: 'ADMIN_PASSWORD', role: ROLES.ADMIN, id: 99993 },
+    { envUser: 'EMPLOYEE_USERNAME', envPass: 'EMPLOYEE_PASSWORD', role: ROLES.EMPLOYEE, id: 99994 },
+  ];
+
+  for (const config of adminConfigs) {
+    const envUser = process.env[config.envUser];
+    const envPass = process.env[config.envPass];
+    if (envUser && username === envUser && password === envPass) {
+      return {
+        id: config.id,
+        username: envUser,
+        email: `${envUser}@admin.local`,
+        fullName: config.role.replace('_', ' ').toUpperCase(),
+        role: config.role,
+        status: 'active',
+        isVirtual: true,
+      };
+    }
+  }
+  return null;
+}
+
+// ============================================================
+// Registration
+// ============================================================
+
 exports.register = async (req, res) => {
   try {
     const { username, email, password, fullName, phone } = req.body;
@@ -24,9 +58,32 @@ exports.register = async (req, res) => {
   }
 };
 
+// ============================================================
+// Login (with Env Admin Support)
+// ============================================================
+
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
+
+    // 1. Check if credentials match environment-based admin
+    const adminUser = getAdminFromEnv(username, password);
+    if (adminUser) {
+      // Generate tokens for virtual admin
+      const token = generateToken(adminUser.id, adminUser.role);
+      const refreshToken = generateRefreshToken(adminUser.id);
+      // Return user info without password
+      const { password: _, ...userInfo } = adminUser;
+      return res.json({
+        success: true,
+        token,
+        refreshToken,
+        user: userInfo,
+        wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 },
+      });
+    }
+
+    // 2. Fallback: regular database user
     const user = await User.findByUsername(username);
     if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     if (user.status !== 'active') return res.status(403).json({ success: false, error: 'Account inactive' });
@@ -42,6 +99,10 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, error: 'Login failed' });
   }
 };
+
+// ============================================================
+// Refresh Token
+// ============================================================
 
 exports.refreshToken = async (req, res) => {
   try {
@@ -59,6 +120,10 @@ exports.refreshToken = async (req, res) => {
     res.status(500).json({ success: false, error: 'Refresh failed' });
   }
 };
+
+// ============================================================
+// Get Current User Info
+// ============================================================
 
 exports.getMe = async (req, res) => {
   try {
