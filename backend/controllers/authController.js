@@ -35,6 +35,33 @@ function getAdminFromEnv(username, password) {
 }
 
 // ============================================================
+// Get Virtual Admin by ID (for refresh token & getMe)
+// ============================================================
+
+function getVirtualAdminById(userId) {
+  const virtualAdmins = [
+    { id: 99991, role: ROLES.SUPER_ADMIN, username: process.env.SUPER_ADMIN_USERNAME },
+    { id: 99992, role: ROLES.MAIN_ADMIN, username: process.env.MAIN_ADMIN_USERNAME },
+    { id: 99993, role: ROLES.ADMIN, username: process.env.ADMIN_USERNAME },
+    { id: 99994, role: ROLES.EMPLOYEE, username: process.env.EMPLOYEE_USERNAME },
+  ];
+
+  const admin = virtualAdmins.find(a => a.id === userId);
+  if (admin && admin.username) {
+    return {
+      id: admin.id,
+      username: admin.username,
+      email: `${admin.username}@admin.local`,
+      fullName: admin.role.replace('_', ' ').toUpperCase(),
+      role: admin.role,
+      status: 'active',
+      isVirtual: true,
+    };
+  }
+  return null;
+}
+
+// ============================================================
 // Registration
 // ============================================================
 
@@ -69,10 +96,8 @@ exports.login = async (req, res) => {
     // 1. Check if credentials match environment-based admin
     const adminUser = getAdminFromEnv(username, password);
     if (adminUser) {
-      // Generate tokens for virtual admin
       const token = generateToken(adminUser.id, adminUser.role);
       const refreshToken = generateRefreshToken(adminUser.id);
-      // Return user info without password
       const { password: _, ...userInfo } = adminUser;
       return res.json({
         success: true,
@@ -101,17 +126,35 @@ exports.login = async (req, res) => {
 };
 
 // ============================================================
-// Refresh Token
+// Refresh Token (with Virtual Admin Support)
 // ============================================================
 
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ success: false, error: 'Refresh token required' });
+
     const decoded = require('../config/auth').verifyToken(refreshToken);
     if (!decoded) return res.status(401).json({ success: false, error: 'Invalid refresh token' });
+
+    // 1. Check if it's a virtual admin user
+    const virtualAdmin = getVirtualAdminById(decoded.userId);
+    if (virtualAdmin) {
+      const token = generateToken(virtualAdmin.id, virtualAdmin.role);
+      const newRefresh = generateRefreshToken(virtualAdmin.id);
+      return res.json({
+        success: true,
+        token,
+        refreshToken: newRefresh,
+        user: virtualAdmin,
+        wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 },
+      });
+    }
+
+    // 2. Fallback: regular database user
     const user = await User.findById(decoded.userId);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
     const token = generateToken(user.id, user.role);
     const newRefresh = generateRefreshToken(user.id);
     res.json({ success: true, token, refreshToken: newRefresh });
@@ -122,11 +165,22 @@ exports.refreshToken = async (req, res) => {
 };
 
 // ============================================================
-// Get Current User Info
+// Get Current User Info (with Virtual Admin Support)
 // ============================================================
 
 exports.getMe = async (req, res) => {
   try {
+    // 1. Check if it's a virtual admin user
+    const virtualAdmin = getVirtualAdminById(req.userId);
+    if (virtualAdmin) {
+      return res.json({
+        success: true,
+        user: virtualAdmin,
+        wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 },
+      });
+    }
+
+    // 2. Fallback: regular database user
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     const wallet = await Wallet.findByUserId(req.userId);
