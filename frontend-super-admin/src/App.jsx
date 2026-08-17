@@ -80,9 +80,9 @@ const CountrySettings = lazy(() => import('./pages/Settings/CountrySettings'));
 const SupportChat = lazy(() => import('./pages/Support/SupportChat'));
 
 // ============================================================
-// Protected Route Component
+// Protected Route Component - MOVED INSIDE App
 // ============================================================
-const ProtectedRoute = ({ children }) => {
+function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) return <LoadingSpinner />;
@@ -92,7 +92,7 @@ const ProtectedRoute = ({ children }) => {
   }
   
   return children;
-};
+}
 
 // ============================================================
 // Main App Component
