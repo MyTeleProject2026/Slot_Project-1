@@ -2,10 +2,37 @@ const { verifyToken } = require('../config/auth');
 const pool = require('../config/database');
 const { hasPermission } = require('../config/roles');
 
-/**
- * Middleware to authenticate requests using JWT.
- * Attaches `req.user`, `req.userId`, `req.userRole` if valid.
- */
+// ============================================================
+// Virtual Admin Users (from environment variables)
+// ============================================================
+
+function getVirtualAdminById(userId) {
+  const virtualAdmins = [
+    { id: 99991, role: 'super_admin', username: process.env.SUPER_ADMIN_USERNAME },
+    { id: 99992, role: 'main_admin', username: process.env.MAIN_ADMIN_USERNAME },
+    { id: 99993, role: 'admin', username: process.env.ADMIN_USERNAME },
+    { id: 99994, role: 'employee', username: process.env.EMPLOYEE_USERNAME },
+  ];
+
+  const admin = virtualAdmins.find(a => a.id === userId);
+  if (admin && admin.username) {
+    return {
+      id: admin.id,
+      username: admin.username,
+      email: `${admin.username}@admin.local`,
+      fullName: admin.role.replace('_', ' ').toUpperCase(),
+      role: admin.role,
+      status: 'active',
+      isVirtual: true,
+    };
+  }
+  return null;
+}
+
+// ============================================================
+// Authentication Middleware
+// ============================================================
+
 const authenticate = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -27,6 +54,16 @@ const authenticate = async (req, res, next) => {
       });
     }
 
+    // ✅ Check if it's a virtual admin user FIRST
+    const virtualAdmin = getVirtualAdminById(decoded.userId);
+    if (virtualAdmin) {
+      req.user = virtualAdmin;
+      req.userId = virtualAdmin.id;
+      req.userRole = virtualAdmin.role;
+      return next();
+    }
+
+    // Fallback: Check database for regular users
     const [users] = await pool.query(
       'SELECT id, username, email, role, status FROM users WHERE id = ?',
       [decoded.userId]
@@ -64,10 +101,10 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-/**
- * Middleware to check if user has one of the allowed roles.
- * Usage: `authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN)`
- */
+// ============================================================
+// Authorization Middleware (unchanged)
+// ============================================================
+
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -90,10 +127,6 @@ const authorize = (...allowedRoles) => {
   };
 };
 
-/**
- * Middleware to check for a specific permission.
- * Usage: `requirePermission(PERMISSIONS.VIEW_USERS)`
- */
 const requirePermission = (permission) => {
   return (req, res, next) => {
     if (!req.user) {
