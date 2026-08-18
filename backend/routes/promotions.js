@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const promotionController = require('../controllers/promotionController');
 const { authenticate, authorize } = require('../middleware/auth');
+const Setting = require('../models/Setting');
 const { ROLES } = require('../config/roles');
 
 router.get('/', promotionController.getActivePromotions);
