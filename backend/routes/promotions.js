@@ -1,4 +1,4 @@
-Setting' express = require('express');
+const express = require('express');
 const router = express.Router();
 const promotionController = require('../controllers/promotionController');
 const { authenticate, authorize } = require('../middleware/auth');
