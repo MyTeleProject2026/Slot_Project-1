@@ -31,11 +31,9 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'https://testing-frontend-deploy.onrender.com',
+      process.env.FRONTEND_URL || 'http://localhost:3000', 'https://testing-frontend-deploy.onrender.com',
       process.env.ADMIN_URL || 'http://localhost:3001',
-      process.env.SUPER_ADMIN_URL || 'http://localhost:3002',
-      'https://frontend-super-admin-panel.onrender.com',
+      process.env.SUPER_ADMIN_URL || 'http://localhost:3002', 'https://frontend-super-admin-panel.onrender.com',
       process.env.MAIN_ADMIN_URL || 'http://localhost:3003'
     ],
     credentials: true
