@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Settings = require('../models/Settings');
+const settings = require('../models/Settings');
 
 // Public settings (no auth required)
 router.get('/public', async (req, res) => {
