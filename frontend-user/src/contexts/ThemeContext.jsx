@@ -24,31 +24,51 @@ export const ThemeProvider = ({ children }) => {
     applyThemeColors(theme);
   }, [theme]);
 
-  // ✅ Apply orange/gold colors to match your logo
+  // ✅ N999Bet Gold Theme (from your HTML template)
   const applyThemeColors = (mode) => {
     const root = document.documentElement;
+    const gold = '#d4a745';
+    const goldLight = '#f0d080';
+    const goldDark = '#b8922f';
+
     if (mode === 'dark') {
-      root.style.setProperty('--primary', '#FF6B00');
-      root.style.setProperty('--primary-light', '#FF8C38');
-      root.style.setProperty('--primary-dark', '#CC5500');
-      root.style.setProperty('--secondary', '#FFAA00');
-      root.style.setProperty('--bg-primary', '#0A0A0F');
-      root.style.setProperty('--bg-secondary', '#1A1A2E');
-      root.style.setProperty('--text-primary', '#FFFFFF');
-      root.style.setProperty('--text-secondary', '#A0A0B0');
-      root.style.setProperty('--gradient-start', '#FF6B00');
-      root.style.setProperty('--gradient-end', '#FFAA00');
+      root.style.setProperty('--primary', gold);
+      root.style.setProperty('--primary-light', goldLight);
+      root.style.setProperty('--primary-dark', goldDark);
+      root.style.setProperty('--secondary', goldLight);
+      root.style.setProperty('--bg-primary', '#0a0e17');
+      root.style.setProperty('--bg-secondary', '#111927');
+      root.style.setProperty('--bg-card', '#161f33');
+      root.style.setProperty('--bg-card-hover', '#1c2842');
+      root.style.setProperty('--bg-input', '#0d1422');
+      root.style.setProperty('--text-primary', '#ffffff');
+      root.style.setProperty('--text-secondary', '#e8e8f0');
+      root.style.setProperty('--text-muted', '#8899bb');
+      root.style.setProperty('--border-subtle', 'rgba(212, 167, 69, 0.15)');
+      root.style.setProperty('--border-gold', 'rgba(212, 167, 69, 0.40)');
+      root.style.setProperty('--gradient-start', gold);
+      root.style.setProperty('--gradient-end', goldDark);
+      root.style.setProperty('--shadow-glow', '0 0 40px rgba(212, 167, 69, 0.08)');
+      root.style.setProperty('--shadow-card', '0 8px 32px rgba(0, 0, 0, 0.60)');
     } else {
-      root.style.setProperty('--primary', '#FF6B00');
-      root.style.setProperty('--primary-light', '#FF8C38');
-      root.style.setProperty('--primary-dark', '#CC5500');
-      root.style.setProperty('--secondary', '#FFAA00');
-      root.style.setProperty('--bg-primary', '#FFFFFF');
-      root.style.setProperty('--bg-secondary', '#F5F5F5');
-      root.style.setProperty('--text-primary', '#1A1A2E');
-      root.style.setProperty('--text-secondary', '#4A4A5A');
-      root.style.setProperty('--gradient-start', '#FF6B00');
-      root.style.setProperty('--gradient-end', '#FFAA00');
+      root.style.setProperty('--primary', gold);
+      root.style.setProperty('--primary-light', goldLight);
+      root.style.setProperty('--primary-dark', goldDark);
+      root.style.setProperty('--secondary', goldLight);
+      root.style.setProperty('--bg-primary', '#f5f0eb');
+      root.style.setProperty('--bg-secondary', '#ffffff');
+      root.style.setProperty('--bg-card', '#ffffff');
+      root.style.setProperty('--bg-card-hover', '#faf6f0');
+      root.style.setProperty('--bg-input', '#f0ebe5');
+      root.style.setProperty('--text-primary', '#1a120e');
+      root.style.setProperty('--text-secondary', '#3a322e');
+      root.style.setProperty('--text-muted', '#7a726e');
+      root.style.setProperty('--border-subtle', 'rgba(212, 167, 69, 0.20)');
+      root.style.setProperty('--border-gold', 'rgba(212, 167, 69, 0.50)');
+      root.style.setProperty('--gradient-start', gold);
+      root.style.setProperty('--gradient-end', goldDark);
+      root.style.setProperty('--shadow-glow', '0 0 40px rgba(212, 167, 69, 0.08)');
+      root.style.setProperty('--shadow-card', '0 8px 32px rgba(0, 0, 0, 0.10)');
     }
   };
 
