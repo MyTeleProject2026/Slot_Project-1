@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaPlay, FaHeart, FaRegHeart } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import { useGames } from '../../hooks/useGames';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
-// Helper to get game display name
+// Helper: Get game display name
 const getGameDisplayName = (game) => {
   if (game.name && game.name !== 'Unknown Game') return game.name;
-  // Try to get from aliases
   if (game.aliases && game.aliases.length > 0) {
     return game.aliases[0].name || 'Unknown Game';
   }
   return 'Unknown Game';
 };
 
+// Helper: Get game provider
 const getGameProvider = (game) => {
   if (game.provider && game.provider !== 'unknown') return game.provider;
   if (game.aliases && game.aliases.length > 0) {
@@ -23,15 +24,19 @@ const getGameProvider = (game) => {
   return 'Unknown Provider';
 };
 
+// Helper: Get RTP (last value in array, or single value)
 const getGameRTP = (game) => {
-  if (game.rtp && game.rtp.length > 0) {
+  if (game.rtpOverride) return game.rtpOverride;
+  if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
+    // RTP array from Slotopol – return the last value (highest RTP)
     return game.rtp[game.rtp.length - 1];
   }
-  if (game.rtpOverride) return game.rtpOverride;
+  if (typeof game.rtp === 'number') return game.rtp;
   return null;
 };
 
 const GameCard = ({ game }) => {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { toggleFavorite, isFavorite } = useGames();
   const [isHovered, setIsHovered] = useState(false);
@@ -50,17 +55,21 @@ const GameCard = ({ game }) => {
   const rtp = getGameRTP(game);
   const favorite = isFavorite(game.id);
 
-  // Placeholder image using game name
-  const placeholderImage = `https://via.placeholder.com/300x400/1a1a2e/ffffff?text=${encodeURIComponent(displayName.substring(0, 20))}`;
+  // Build placeholder image
+  const placeholderImage = `https://via.placeholder.com/300x400/1a1a2e/ffffff?text=${encodeURIComponent(displayName.substring(0, 15))}`;
   const imageUrl = game.image_url || game.image || placeholderImage;
 
+  // ============================================================
+  // ✅ FIXED: Launch game using navigate
+  // ============================================================
   const handlePlay = (e) => {
     e.stopPropagation();
     if (!isAuthenticated) {
       toast.error('Please login to play');
       return;
     }
-    toast.success(`Loading ${displayName}...`);
+    // Navigate to game play page with game ID
+    navigate(`/play/${encodeURIComponent(game.id)}`);
   };
 
   const handleFavorite = (e) => {
