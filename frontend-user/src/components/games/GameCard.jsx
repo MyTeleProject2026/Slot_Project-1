@@ -6,7 +6,7 @@ import { useGames } from '../../hooks/useGames';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
-// Helper: Get game display name
+// Helper functions (same as before)
 const getGameDisplayName = (game) => {
   if (game.name && game.name !== 'Unknown Game') return game.name;
   if (game.aliases && game.aliases.length > 0) {
@@ -15,7 +15,6 @@ const getGameDisplayName = (game) => {
   return 'Unknown Game';
 };
 
-// Helper: Get game provider
 const getGameProvider = (game) => {
   if (game.provider && game.provider !== 'unknown') return game.provider;
   if (game.aliases && game.aliases.length > 0) {
@@ -24,7 +23,6 @@ const getGameProvider = (game) => {
   return 'Unknown Provider';
 };
 
-// Helper: Get RTP (last value in array, or single value)
 const getGameRTP = (game) => {
   if (game.rtpOverride) return game.rtpOverride;
   if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
@@ -32,6 +30,12 @@ const getGameRTP = (game) => {
   }
   if (typeof game.rtp === 'number') return game.rtp;
   return null;
+};
+
+// Generate a simple placeholder SVG with game initials
+const generatePlaceholder = (name) => {
+  const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='400' viewBox='0 0 300 400'%3E%3Crect width='300' height='400' fill='%23161f33'/%3E%3Ctext x='150' y='200' font-family='Arial' font-size='48' fill='%23d4a745' text-anchor='middle' dominant-baseline='central'%3E${initials}%3C/text%3E%3C/svg%3E`;
 };
 
 const GameCard = ({ game }) => {
@@ -54,9 +58,8 @@ const GameCard = ({ game }) => {
   const rtp = getGameRTP(game);
   const favorite = isFavorite(game.id);
 
-  // Build placeholder image with gold theme
-  const placeholderImage = `https://via.placeholder.com/300x400/161f33/d4a745?text=${encodeURIComponent(displayName.substring(0, 15))}`;
-  const imageUrl = game.image_url || game.image || placeholderImage;
+  // Use placeholder if no image URL
+  const imageUrl = game.image_url || game.image || generatePlaceholder(displayName);
 
   const handlePlay = (e) => {
     e.stopPropagation();
@@ -99,7 +102,7 @@ const GameCard = ({ game }) => {
           }`}
           loading="lazy"
           onLoad={() => setImageLoaded(true)}
-          onError={() => setImageLoaded(true)}
+          onError={() => setImageLoaded(true)} // fallback to placeholder
         />
 
         {/* Badges */}
