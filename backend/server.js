@@ -12,7 +12,8 @@ dotenv.config();
 
 // Database connection
 const pool = require('./config/database');
-
+const GameMetadata = require('./models/GameMetadata');
+await GameMetadata.initTable();
 // Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
