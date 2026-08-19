@@ -9,6 +9,8 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import Layout from './components/common/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Play from './pages/Play';
+import { setCurrentCountry } from './utils/constants';
+import axios from 'axios';
 // ============================================================
 // ErrorBoundary (same as before)
 // ============================================================
@@ -155,4 +157,19 @@ function App() {
   );
 }
 
+
+// Inside the App component, add this useEffect after the existing one
+useEffect(() => {
+  const fetchCountry = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/settings/country`);
+      if (response.data?.success && response.data?.country) {
+        setCurrentCountry(response.data.country);
+      }
+    } catch (error) {
+      console.log('Using default country');
+    }
+  };
+  fetchCountry();
+}, []);
 export default App;
