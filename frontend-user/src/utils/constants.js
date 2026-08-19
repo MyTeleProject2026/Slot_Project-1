@@ -1,17 +1,59 @@
 // ============================================================
-// APPLICATION CONSTANTS
+// N999Bet – APPLICATION CONSTANTS
 // ============================================================
 
 // API Configuration
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// App Configuration
-export const APP_NAME = import.meta.env.VITE_APP_NAME || 'FattBet';
+// App Configuration – ✅ Changed to N999Bet
+export const APP_NAME = import.meta.env.VITE_APP_NAME || 'N999Bet';
 export const APP_VERSION = '1.0.0';
 
-// Currency
-export const CURRENCY = 'THB';
-export const CURRENCY_SYMBOL = '฿';
+// ✅ Country & Currency Support (Super Admin can change this)
+export const DEFAULT_COUNTRY = {
+  code: 'TH',
+  name: 'Thailand',
+  currency: 'THB',
+  currencySymbol: '฿',
+  locale: 'th-TH',
+  timezone: 'Asia/Bangkok'
+};
+
+export const SUPPORTED_COUNTRIES = [
+  { code: 'TH', name: 'Thailand', currency: 'THB', currencySymbol: '฿', locale: 'th-TH' },
+  { code: 'MY', name: 'Malaysia', currency: 'MYR', currencySymbol: 'RM', locale: 'ms-MY' },
+  { code: 'SG', name: 'Singapore', currency: 'SGD', currencySymbol: 'S$', locale: 'en-SG' },
+  { code: 'ID', name: 'Indonesia', currency: 'IDR', currencySymbol: 'Rp', locale: 'id-ID' },
+  { code: 'PH', name: 'Philippines', currency: 'PHP', currencySymbol: '₱', locale: 'en-PH' },
+  { code: 'VN', name: 'Vietnam', currency: 'VND', currencySymbol: '₫', locale: 'vi-VN' },
+  { code: 'MM', name: 'Myanmar', currency: 'MMK', currencySymbol: 'K', locale: 'my-MM' },
+];
+
+// ✅ Country state management
+let currentCountry = { ...DEFAULT_COUNTRY };
+
+export const getCurrentCountry = () => currentCountry;
+export const setCurrentCountry = (country) => {
+  if (country && country.code) {
+    currentCountry = { ...country };
+    localStorage.setItem('n999bet_country', JSON.stringify(country));
+  }
+};
+
+// Load from localStorage on init
+try {
+  const saved = localStorage.getItem('n999bet_country');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    if (parsed && parsed.code) {
+      currentCountry = parsed;
+    }
+  }
+} catch (e) {}
+
+// ✅ Currency helper – uses current country
+export const CURRENCY = () => getCurrentCountry().currency || 'THB';
+export const CURRENCY_SYMBOL = () => getCurrentCountry().currencySymbol || '฿';
 
 // Game Categories
 export const GAME_CATEGORIES = [
@@ -140,6 +182,7 @@ export const STORAGE_KEYS = {
   THEME: 'theme',
   FAVORITES: 'favorites',
   LANGUAGE: 'language',
+  COUNTRY: 'n999bet_country',
 };
 
 // Default Messages
@@ -152,21 +195,21 @@ export const DEFAULT_MESSAGES = {
   NETWORK_ERROR: 'Network error. Please check your connection.',
 };
 
-// Social Media Links
+// Social Media Links – ✅ N999Bet
 export const SOCIAL_LINKS = {
-  FACEBOOK: 'https://www.facebook.com/',
-  INSTAGRAM: 'https://www.instagram.com/',
-  YOUTUBE: 'https://www.youtube.com/',
-  TELEGRAM: 'https://t.me/',
-  WHATSAPP: 'https://wa.me/',
+  FACEBOOK: 'https://www.facebook.com/n999bet',
+  INSTAGRAM: 'https://www.instagram.com/n999bet',
+  YOUTUBE: 'https://www.youtube.com/n999bet',
+  TELEGRAM: 'https://t.me/n999bet',
+  WHATSAPP: 'https://wa.me/yournumber',
 };
 
-// Support Contact
+// Support Contact – ✅ N999Bet
 export const SUPPORT = {
-  EMAIL: 'support@fattbet.com',
+  EMAIL: 'support@n999bet.com',
   PHONE: '+66 2 123 4567',
   WHATSAPP: 'https://wa.me/yournumber',
-  TELEGRAM: 'https://t.me/yourusername',
+  TELEGRAM: 'https://t.me/n999bet',
 };
 
 // Responsive Breakpoints
@@ -185,7 +228,7 @@ export const PAGINATION = {
   DEFAULT_LIMITS: [10, 20, 50, 100],
 };
 
-// Image Placeholders
+// Image Placeholders – ✅ N999Bet gold theme
 export const IMAGE_PLACEHOLDERS = {
   GAME: '/assets/images/placeholder-game.png',
   PROVIDER: '/assets/images/placeholder-provider.png',
@@ -231,4 +274,8 @@ export default {
   PAGINATION,
   IMAGE_PLACEHOLDERS,
   DATE_FORMATS,
+  DEFAULT_COUNTRY,
+  SUPPORTED_COUNTRIES,
+  getCurrentCountry,
+  setCurrentCountry,
 };
