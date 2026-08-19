@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaFacebook, FaInstagram, FaYoutube, FaTelegram } from 'react-icons/fa';
+import { FaFacebook, FaInstagram, FaYoutube, FaTelegram, FaWhatsapp } from 'react-icons/fa';
+import { APP_NAME } from '../../utils/constants';
 
 const Footer = () => {
   const year = new Date().getFullYear();
@@ -9,13 +10,14 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-lg font-bold text-primary-500 mb-4">FattBet</h3>
+            <h3 className="text-lg font-bold text-primary-500 mb-4">{APP_NAME}</h3>
             <p className="text-gray-400 text-sm leading-relaxed">Your trusted online gaming platform. Play safe, win big.</p>
             <div className="flex gap-3 mt-4">
               <a href="#" className="text-gray-400 hover:text-primary-500 transition"><FaFacebook className="text-xl" /></a>
               <a href="#" className="text-gray-400 hover:text-primary-500 transition"><FaInstagram className="text-xl" /></a>
               <a href="#" className="text-gray-400 hover:text-primary-500 transition"><FaYoutube className="text-xl" /></a>
               <a href="#" className="text-gray-400 hover:text-primary-500 transition"><FaTelegram className="text-xl" /></a>
+              <a href="#" className="text-gray-400 hover:text-primary-500 transition"><FaWhatsapp className="text-xl" /></a>
             </div>
           </div>
           <div>
@@ -39,14 +41,13 @@ const Footer = () => {
           <div>
             <h4 className="text-white font-semibold mb-4">Contact</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              <li>📧 support@fattbet.com</li>
-              <li>📞 +66 2 123 4567</li>
+              <li>📧 support@n999bet.com</li>
               <li>💬 24/7 Live Chat</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-dark-800 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-sm">© {year} FattBet. All rights reserved.</p>
+          <p className="text-gray-500 text-sm">© {year} {APP_NAME}. All rights reserved.</p>
           <div className="flex items-center gap-4 text-gray-500 text-sm">
             <span>18+</span>
             <span>|</span>
