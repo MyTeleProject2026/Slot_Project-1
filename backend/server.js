@@ -39,6 +39,8 @@ const io = new Server(httpServer, {
     credentials: true
   }
 });
+// After `const app = express();`
+app.set('trust proxy', true);
 
 // ============ MIDDLEWARE ============
 
