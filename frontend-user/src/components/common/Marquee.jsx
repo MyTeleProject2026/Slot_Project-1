@@ -1,31 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { FaBullhorn } from 'react-icons/fa';
-import api from '../../services/api';
 
 const Marquee = () => {
-  const [messages, setMessages] = useState([
-    '🎉 Welcome to FattBet! Enjoy the best gaming experience!',
+  const [messages] = useState([
+    '🎉 Welcome to N999Bet! Enjoy the best gaming experience!',
     '💰 New players get 100% welcome bonus up to 5,000 THB!',
     '🏆 Daily tournaments with huge prizes! Join now!',
     '📱 Play on mobile and win big anywhere, anytime!',
   ]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const fetchMarquee = async () => {
-      try {
-        // Try to fetch from API (if super admin has configured it)
-        const response = await api.get('/settings/marquee');
-        if (response.data?.success && response.data?.messages?.length > 0) {
-          setMessages(response.data.messages);
-        }
-      } catch (error) {
-        // Fallback to default messages (already set)
-        console.log('Using default marquee messages');
-      }
-    };
-    fetchMarquee();
-  }, []);
 
   useEffect(() => {
     if (messages.length === 0) return;
