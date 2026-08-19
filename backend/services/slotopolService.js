@@ -50,6 +50,14 @@ class SlotopolService {
       throw new Error(error.response?.data?.what || 'Slotopol service error');
     }
   }
+  // Add this method to the class
+  static async addBalanceToUser({ uid, cid = 1, sum }) {
+    return this.request('POST', '/prop/wallet/add', {
+      cid,
+      uid: parseInt(uid),
+      sum
+    });
+  }
 
   static async startGame(userId, provider, game, bet, lines) {
     const alias = `${provider}/${game}`;
