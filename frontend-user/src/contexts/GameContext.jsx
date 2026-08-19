@@ -52,7 +52,6 @@ export const GameProvider = ({ children }) => {
   ];
 
   const fetchGames = async (params = {}) => {
-    // Prevent duplicate simultaneous calls
     if (isFetching) {
       console.log('⏳ Already fetching games, skipping duplicate call');
       return [];
@@ -67,7 +66,6 @@ export const GameProvider = ({ children }) => {
       return gamesData;
     } catch (error) {
       console.error('Fetch games error:', error);
-      // Check if it's a 429 error
       if (error.response?.status === 429) {
         setError('Too many requests. Please wait a moment and try again.');
       } else {
@@ -142,6 +140,7 @@ export const GameProvider = ({ children }) => {
     }
   };
 
+  // ✅ Fixed startGame – returns the full response with session
   const startGame = async (gameId, betAmount = 1, selectedLines = 20) => {
     if (!isAuthenticated) {
       toast.error('Please login to play');
@@ -149,11 +148,15 @@ export const GameProvider = ({ children }) => {
     }
     try {
       const data = await gameService.startGame({ gameId, betAmount, selectedLines });
+      // data is the full response from backend: { success, sessionId, session, wallet }
       setActiveGame(data?.session);
-      return data;
+      return data; // return the whole response
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to start game');
-      return null;
+      console.error('Start game error:', error);
+      const msg = error.response?.data?.error || 'Failed to start game';
+      toast.error(msg);
+      // Re-throw so the caller can handle it
+      throw error;
     }
   };
 
@@ -162,6 +165,7 @@ export const GameProvider = ({ children }) => {
       const data = await gameService.spin({ sessionId, betAmount, selectedLines });
       return data;
     } catch (error) {
+      console.error('Spin error:', error);
       toast.error(error.response?.data?.error || 'Spin failed');
       throw error;
     }
@@ -173,7 +177,8 @@ export const GameProvider = ({ children }) => {
       return data;
     } catch (error) {
       console.error('Collect win error:', error);
-      return null;
+      toast.error(error.response?.data?.error || 'Collect failed');
+      throw error;
     }
   };
 
@@ -192,7 +197,7 @@ export const GameProvider = ({ children }) => {
     console.log('🧹 Cache cleared from context');
   };
 
-  // Load favorites from localStorage on mount
+  // Load favorites from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('favorites');
     if (saved) {
@@ -200,7 +205,7 @@ export const GameProvider = ({ children }) => {
     }
   }, []);
 
-  // Initial fetch - only once
+  // Initial fetch
   useEffect(() => {
     let mounted = true;
     const loadData = async () => {
