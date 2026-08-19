@@ -140,7 +140,7 @@ export const GameProvider = ({ children }) => {
     }
   };
 
-  // ✅ Fixed startGame – returns the full response with session
+  // ✅ FIXED: startGame returns the full response and throws errors properly
   const startGame = async (gameId, betAmount = 1, selectedLines = 20) => {
     if (!isAuthenticated) {
       toast.error('Please login to play');
@@ -148,14 +148,12 @@ export const GameProvider = ({ children }) => {
     }
     try {
       const data = await gameService.startGame({ gameId, betAmount, selectedLines });
-      // data is the full response from backend: { success, sessionId, session, wallet }
       setActiveGame(data?.session);
       return data; // return the whole response
     } catch (error) {
       console.error('Start game error:', error);
       const msg = error.response?.data?.error || 'Failed to start game';
       toast.error(msg);
-      // Re-throw so the caller can handle it
       throw error;
     }
   };
