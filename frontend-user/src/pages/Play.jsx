@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { FaArrowLeft, FaCoins, FaDice } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-// ✅ FIXED: RTP helper – extracts last value from array
+// ✅ RTP helper – extracts last value from array
 const getRtpDisplay = (game) => {
   if (game.rtpOverride) return game.rtpOverride.toFixed(2);
   if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
@@ -25,14 +25,13 @@ const Play = () => {
   const { balance, refreshBalance } = useWallet();
 
   const [game, setGame] = useState(null);
-  const [session, setSession] = useState(null); // { localSessionId, slotopolGameId, gameState }
+  const [session, setSession] = useState(null);
   const [bet, setBet] = useState(1);
   const [spinResult, setSpinResult] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameError, setGameError] = useState(null);
   const [startError, setStartError] = useState(null);
 
-  // Find the game from the list
   useEffect(() => {
     if (!isAuthenticated) {
       toast.error('Please login to play');
@@ -54,7 +53,6 @@ const Play = () => {
     }
   }, [games, gameId, navigate, isAuthenticated]);
 
-  // Auto-start game when game is loaded
   useEffect(() => {
     if (game && !session && !isPlaying && !startError) {
       handleStartGame();
@@ -68,11 +66,11 @@ const Play = () => {
     try {
       const result = await startGame(game.id, bet, 20);
       if (result && result.success !== false) {
-        // ✅ Store both local sessionId and Slotopol gid
+        // ✅ Store the local sessionId for spin/collect
         setSession({
-          localSessionId: result.sessionId,          // used for spin/collect
-          slotopolGameId: result.session?.gid,       // for reference only
-          gameState: result.session?.game,           // current game state
+          localSessionId: result.sessionId,    // ← THIS IS THE CORRECT ID
+          slotopolGameId: result.session?.gid,
+          gameState: result.session?.game,
           wallet: result.wallet || 0,
         });
         setSpinResult(null);
@@ -97,7 +95,7 @@ const Play = () => {
     if (!session || isPlaying) return;
     setIsPlaying(true);
     try {
-      // ✅ Use the local session ID, not the Slotopol gid
+      // ✅ Use localSessionId, NOT slotopolGameId
       const sessionId = session.localSessionId;
       if (!sessionId) {
         toast.error('Invalid session');
