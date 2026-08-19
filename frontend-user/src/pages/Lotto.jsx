@@ -7,10 +7,11 @@ import GameCard from '../components/games/GameCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Lotto = () => {
-  const { games, loading, getGamesByCategory, error } = useGames();
+  const { games, loading, fetchGames, error } = useGames();
 
   useEffect(() => {
-    getGamesByCategory('lotto');
+    // ✅ Fetch all games (since all are slots)
+    fetchGames();
   }, []);
 
   if (loading) return <LoadingSpinner />;
@@ -38,7 +39,7 @@ const Lotto = () => {
           <Link to="/games" className="text-gray-400 hover:text-white transition-all hover:translate-x-[-4px]">
             <FaArrowLeft />
           </Link>
-          <h1 className="text-2xl md:text-3xl font-bold gradient-text">Lotto</h1>
+          <h1 className="text-2xl md:text-3xl font-bold gradient-text">🎱 Lotto</h1>
         </div>
 
         {games.length === 0 ? (
@@ -46,7 +47,7 @@ const Lotto = () => {
             <p>No lotto games available</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="game-grid">
             {games.map((game) => (
               <GameCard key={game.id} game={game} />
             ))}
