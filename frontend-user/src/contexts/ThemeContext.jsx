@@ -1,4 +1,3 @@
-// frontend-user/src/contexts/ThemeContext.jsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
 
 const ThemeContext = createContext();
@@ -22,11 +21,10 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
-    // Apply custom CSS variables for the theme
     applyThemeColors(theme);
   }, [theme]);
 
-  // Apply theme colors matching your logo (orange/gold)
+  // ✅ Apply orange/gold colors to match your logo
   const applyThemeColors = (mode) => {
     const root = document.documentElement;
     if (mode === 'dark') {
@@ -38,6 +36,8 @@ export const ThemeProvider = ({ children }) => {
       root.style.setProperty('--bg-secondary', '#1A1A2E');
       root.style.setProperty('--text-primary', '#FFFFFF');
       root.style.setProperty('--text-secondary', '#A0A0B0');
+      root.style.setProperty('--gradient-start', '#FF6B00');
+      root.style.setProperty('--gradient-end', '#FFAA00');
     } else {
       root.style.setProperty('--primary', '#FF6B00');
       root.style.setProperty('--primary-light', '#FF8C38');
@@ -47,6 +47,8 @@ export const ThemeProvider = ({ children }) => {
       root.style.setProperty('--bg-secondary', '#F5F5F5');
       root.style.setProperty('--text-primary', '#1A1A2E');
       root.style.setProperty('--text-secondary', '#4A4A5A');
+      root.style.setProperty('--gradient-start', '#FF6B00');
+      root.style.setProperty('--gradient-end', '#FFAA00');
     }
   };
 
