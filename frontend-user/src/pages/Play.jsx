@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { FaArrowLeft, FaCoins, FaDice } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-// Helper: Get RTP (last value in array)
+// ✅ FIXED: Get RTP (last value in array)
 const getRtpDisplay = (game) => {
   if (game.rtpOverride) return game.rtpOverride.toFixed(2);
   if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
@@ -67,7 +67,6 @@ const Play = () => {
     setStartError(null);
     try {
       const result = await startGame(game.id, bet, 20);
-      // result is the full response from backend: { success, sessionId, session, wallet }
       if (result && result.success !== false) {
         setSession(result.session || result);
         setSpinResult(null);
