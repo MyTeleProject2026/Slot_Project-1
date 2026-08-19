@@ -58,7 +58,7 @@ const Play = () => {
         setSession(result.session || result);
         setSpinResult(null);
         await refreshBalance();
-        toast.success(`Game started!`);
+        toast.success('Game started!');
       } else {
         toast.error(result?.error || 'Failed to start game');
       }
@@ -144,6 +144,16 @@ const Play = () => {
   const displayName = game.name || 'Game';
   const displayProvider = game.provider || 'Unknown Provider';
   const currentBalance = balance?.main || 0;
+
+  // ✅ FIX: RTP display – extract last value from array
+  const getRtpDisplay = () => {
+    if (game.rtpOverride) return game.rtpOverride.toFixed(2);
+    if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
+      return game.rtp[game.rtp.length - 1].toFixed(2);
+    }
+    if (typeof game.rtp === 'number') return game.rtp.toFixed(2);
+    return 'N/A';
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -268,7 +278,7 @@ const Play = () => {
 
         {/* Info */}
         <div className="mt-4 text-xs text-gray-500 border-t border-dark-700/50 pt-4 flex flex-wrap gap-4">
-          <span>RTP: {game.rtp && Array.isArray(game.rtp) ? game.rtp[game.rtp.length - 1].toFixed(2) : 'N/A'}%</span>
+          <span>RTP: {getRtpDisplay()}%</span>
           <span>Provider: {displayProvider}</span>
           <span>Game ID: {game.id}</span>
         </div>
