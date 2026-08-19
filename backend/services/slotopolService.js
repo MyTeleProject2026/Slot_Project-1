@@ -77,10 +77,22 @@ class SlotopolService {
   }
 
   static async getGameList() {
-    return this.request('GET', '/game/algs');
+    const data = await this.request('GET', '/game/algs');
+    // Also fetch images for games if available
+    // Slotopol may have images via Cloudinary – check if there's an endpoint
+    return data;
   }
 
-  // Add this method for later recharge functionality
+  // ✅ NEW: Get game images from Slotopol/Cloudinary
+  static async getGameImages(gameId) {
+    try {
+      return await this.request('GET', `/cloudinary/images?folder=games/${gameId}`);
+    } catch (error) {
+      console.warn(`No images found for game ${gameId}`);
+      return { images: [] };
+    }
+  }
+
   static async addBalanceToUser({ uid, cid = 1, sum }) {
     return this.request('POST', '/prop/wallet/add', {
       cid,
