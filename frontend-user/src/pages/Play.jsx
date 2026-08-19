@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { FaArrowLeft, FaCoins, FaDice } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-// ✅ FIXED: Get RTP (last value in array)
+// ✅ FIXED: RTP helper – extracts last value from array
 const getRtpDisplay = (game) => {
   if (game.rtpOverride) return game.rtpOverride.toFixed(2);
   if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
@@ -25,7 +25,7 @@ const Play = () => {
   const { balance, refreshBalance } = useWallet();
 
   const [game, setGame] = useState(null);
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(null); // { localSessionId, slotopolGameId, gameState }
   const [bet, setBet] = useState(1);
   const [spinResult, setSpinResult] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -68,7 +68,13 @@ const Play = () => {
     try {
       const result = await startGame(game.id, bet, 20);
       if (result && result.success !== false) {
-        setSession(result.session || result);
+        // ✅ Store both local sessionId and Slotopol gid
+        setSession({
+          localSessionId: result.sessionId,          // used for spin/collect
+          slotopolGameId: result.session?.gid,       // for reference only
+          gameState: result.session?.game,           // current game state
+          wallet: result.wallet || 0,
+        });
         setSpinResult(null);
         await refreshBalance();
         toast.success('Game started!');
@@ -91,7 +97,8 @@ const Play = () => {
     if (!session || isPlaying) return;
     setIsPlaying(true);
     try {
-      const sessionId = session.sessionId || session.gid || session.id;
+      // ✅ Use the local session ID, not the Slotopol gid
+      const sessionId = session.localSessionId;
       if (!sessionId) {
         toast.error('Invalid session');
         return;
@@ -118,7 +125,7 @@ const Play = () => {
   const handleCollect = async () => {
     if (!session) return;
     try {
-      const sessionId = session.sessionId || session.gid || session.id;
+      const sessionId = session.localSessionId;
       if (!sessionId) {
         toast.error('Invalid session');
         return;
