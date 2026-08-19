@@ -24,7 +24,7 @@ export const ThemeProvider = ({ children }) => {
     applyThemeColors(theme);
   }, [theme]);
 
-  // ✅ N999Bet Gold Theme (from your HTML template)
+  // ✅ N999Bet Gold Theme
   const applyThemeColors = (mode) => {
     const root = document.documentElement;
     const gold = '#d4a745';
@@ -48,8 +48,8 @@ export const ThemeProvider = ({ children }) => {
       root.style.setProperty('--border-gold', 'rgba(212, 167, 69, 0.40)');
       root.style.setProperty('--gradient-start', gold);
       root.style.setProperty('--gradient-end', goldDark);
-      root.style.setProperty('--shadow-glow', '0 0 40px rgba(212, 167, 69, 0.08)');
       root.style.setProperty('--shadow-card', '0 8px 32px rgba(0, 0, 0, 0.60)');
+      root.style.setProperty('--shadow-glow', '0 0 40px rgba(212, 167, 69, 0.08)');
     } else {
       root.style.setProperty('--primary', gold);
       root.style.setProperty('--primary-light', goldLight);
@@ -67,8 +67,8 @@ export const ThemeProvider = ({ children }) => {
       root.style.setProperty('--border-gold', 'rgba(212, 167, 69, 0.50)');
       root.style.setProperty('--gradient-start', gold);
       root.style.setProperty('--gradient-end', goldDark);
-      root.style.setProperty('--shadow-glow', '0 0 40px rgba(212, 167, 69, 0.08)');
       root.style.setProperty('--shadow-card', '0 8px 32px rgba(0, 0, 0, 0.10)');
+      root.style.setProperty('--shadow-glow', '0 0 40px rgba(212, 167, 69, 0.08)');
     }
   };
 
