@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const SLOTOPOL_URL = process.env.SLOTOPOL_URL || 'http://localhost:8080';
+const SLOTOPOL_DEFAULT_USER_ID = 3; // Slotopol's default "player" user (uid=3)
 let token = null;
 let tokenExpiry = null;
 
@@ -17,7 +18,6 @@ class SlotopolService {
         secret: process.env.SLOTOPOL_ADMIN_PASSWORD || 'admin123'
       });
       token = response.data.access || response.data.token;
-      // Try different token formats
       if (!token) {
         token = response.data.token || response.data.access;
       }
@@ -50,20 +50,13 @@ class SlotopolService {
       throw new Error(error.response?.data?.what || 'Slotopol service error');
     }
   }
-  // Add this method to the class
-  static async addBalanceToUser({ uid, cid = 1, sum }) {
-    return this.request('POST', '/prop/wallet/add', {
-      cid,
-      uid: parseInt(uid),
-      sum
-    });
-  }
 
   static async startGame(userId, provider, game, bet, lines) {
     const alias = `${provider}/${game}`;
+    // Use the fixed Slotopol user ID to avoid "user not found"
     return this.request('POST', '/game/new', {
       cid: 1,
-      uid: parseInt(userId),
+      uid: SLOTOPOL_DEFAULT_USER_ID,
       alias: alias
     });
   }
@@ -85,6 +78,15 @@ class SlotopolService {
 
   static async getGameList() {
     return this.request('GET', '/game/algs');
+  }
+
+  // Add this method for later recharge functionality
+  static async addBalanceToUser({ uid, cid = 1, sum }) {
+    return this.request('POST', '/prop/wallet/add', {
+      cid,
+      uid: parseInt(uid),
+      sum
+    });
   }
 }
 
