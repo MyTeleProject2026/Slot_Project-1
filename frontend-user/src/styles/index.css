@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================================
-   ROOT VARIABLES
+   ROOT VARIABLES – Set by ThemeContext
    ============================================================ */
 :root {
   --vh: 1vh;
@@ -13,6 +13,18 @@
   --max-width: 1200px;
   --header-height: 60px;
   --mobile-header-height: 56px;
+
+  /* Theme colors – these are set by ThemeContext */
+  --primary: #FF6B00;
+  --primary-light: #FF8C38;
+  --primary-dark: #CC5500;
+  --secondary: #FFAA00;
+  --bg-primary: #0A0A0F;
+  --bg-secondary: #1A1A2E;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0B0;
+  --gradient-start: #FF6B00;
+  --gradient-end: #FFAA00;
 }
 
 /* ============================================================
@@ -33,13 +45,14 @@ html {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: #0f0f1a;
-  color: #ffffff;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   min-height: calc(var(--vh, 1vh) * 100);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #root {
@@ -60,12 +73,12 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #f1c40f;
+  background: var(--secondary);
   border-radius: 10px;
 }
 
 /* ============================================================
-   CONTAINER - RESPONSIVE
+   CONTAINER
    ============================================================ */
 .container {
   width: 100%;
@@ -76,32 +89,18 @@ body {
   padding-right: 16px;
 }
 
-/* Tablet */
 @media (min-width: 640px) {
-  .container {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
+  .container { padding-left: 24px; padding-right: 24px; }
 }
-
-/* Desktop */
 @media (min-width: 1024px) {
-  .container {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
+  .container { padding-left: 32px; padding-right: 32px; }
 }
-
-/* Large Desktop */
 @media (min-width: 1280px) {
-  .container {
-    padding-left: 40px;
-    padding-right: 40px;
-  }
+  .container { padding-left: 40px; padding-right: 40px; }
 }
 
 /* ============================================================
-   SAFE AREA (Notch phones)
+   SAFE AREA
    ============================================================ */
 .safe-area-bottom {
   padding-bottom: var(--safe-area-inset-bottom);
@@ -116,7 +115,6 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
 }
-
 .glass-light {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
@@ -125,10 +123,10 @@ body {
 }
 
 /* ============================================================
-   GRADIENT TEXT
+   GRADIENT TEXT – Uses theme colors
    ============================================================ */
 .gradient-text {
-  background: linear-gradient(135deg, #f1c40f, #e67e22);
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -138,10 +136,10 @@ body {
    GLOW EFFECTS
    ============================================================ */
 .glow {
-  box-shadow: 0 0 30px rgba(241, 196, 15, 0.15);
+  box-shadow: 0 0 30px rgba(255, 107, 0, 0.15);
 }
 .glow-hover:hover {
-  box-shadow: 0 0 40px rgba(241, 196, 15, 0.25);
+  box-shadow: 0 0 40px rgba(255, 107, 0, 0.25);
 }
 
 /* ============================================================
@@ -156,8 +154,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(241, 196, 15, 0.2); }
-  50% { box-shadow: 0 0 40px rgba(241, 196, 15, 0.4); }
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 0, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(255, 107, 0, 0.4); }
 }
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
@@ -174,7 +172,7 @@ body {
 }
 
 /* ============================================================
-   MARQUEE ANIMATION
+   MARQUEE
    ============================================================ */
 @keyframes marquee {
   0% { transform: translateX(100%); }
@@ -204,7 +202,7 @@ body {
 }
 
 /* ============================================================
-   SWIPER CUSTOMIZATION
+   SWIPER
    ============================================================ */
 .swiper-pagination-bullet {
   background: rgba(255, 255, 255, 0.3) !important;
@@ -212,8 +210,8 @@ body {
   height: 10px !important;
 }
 .swiper-pagination-bullet-active {
-  background: #f1c40f !important;
-  box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+  background: var(--primary) !important;
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.5);
 }
 
 /* ============================================================
@@ -222,7 +220,6 @@ body {
 button, a, input, select, textarea {
   touch-action: manipulation;
 }
-
 input, select, textarea {
   -webkit-appearance: none;
   appearance: none;
@@ -231,26 +228,14 @@ input, select, textarea {
 /* ============================================================
    RESPONSIVE UTILITY CLASSES
    ============================================================ */
-
-/* Hide on mobile */
 @media (max-width: 639px) {
-  .hidden-mobile {
-    display: none !important;
-  }
+  .hidden-mobile { display: none !important; }
 }
-
-/* Show on mobile */
 @media (min-width: 640px) {
-  .show-mobile {
-    display: none !important;
-  }
+  .show-mobile { display: none !important; }
 }
-
-/* Hide on tablet */
 @media (min-width: 640px) and (max-width: 1023px) {
-  .hidden-tablet {
-    display: none !important;
-  }
+  .hidden-tablet { display: none !important; }
 }
 
 /* ============================================================
@@ -261,82 +246,32 @@ input, select, textarea {
   gap: 12px;
   grid-template-columns: repeat(2, 1fr);
 }
-
-@media (min-width: 480px) {
-  .game-grid {
-    gap: 14px;
-  }
-}
-
-@media (min-width: 640px) {
-  .game-grid {
-    gap: 16px;
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 768px) {
-  .game-grid {
-    gap: 20px;
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .game-grid {
-    gap: 24px;
-    grid-template-columns: repeat(5, 1fr);
-  }
-}
-
-@media (min-width: 1280px) {
-  .game-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-}
+@media (min-width: 480px) { .game-grid { gap: 14px; } }
+@media (min-width: 640px) { .game-grid { gap: 16px; grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 768px) { .game-grid { gap: 20px; grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1024px) { .game-grid { gap: 24px; grid-template-columns: repeat(5, 1fr); } }
+@media (min-width: 1280px) { .game-grid { grid-template-columns: repeat(6, 1fr); } }
 
 /* ============================================================
-   PROVIDER FILTER - RESPONSIVE
+   PROVIDER FILTER
    ============================================================ */
 .provider-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
-
-@media (min-width: 640px) {
-  .provider-filter {
-    gap: 8px;
-  }
-}
+@media (min-width: 640px) { .provider-filter { gap: 8px; } }
 
 /* ============================================================
-   BANNER HEIGHTS - RESPONSIVE
+   BANNER HEIGHTS
    ============================================================ */
-.banner-height {
-  height: 180px;
-}
-
-@media (min-width: 640px) {
-  .banner-height {
-    height: 220px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .banner-height {
-    height: 280px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .banner-height {
-    height: 320px;
-  }
-}
+.banner-height { height: 180px; }
+@media (min-width: 640px) { .banner-height { height: 220px; } }
+@media (min-width: 1024px) { .banner-height { height: 280px; } }
+@media (min-width: 1280px) { .banner-height { height: 320px; } }
 
 /* ============================================================
-   BOTTOM NAV - MOBILE ONLY
+   BOTTOM NAV
    ============================================================ */
 .bottom-nav {
   position: fixed;
@@ -356,12 +291,11 @@ input, select, textarea {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(241, 196, 15, 0.2);
-  border-top-color: #f1c40f;
+  border: 4px solid rgba(255, 107, 0, 0.2);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
