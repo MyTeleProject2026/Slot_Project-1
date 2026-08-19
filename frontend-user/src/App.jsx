@@ -1,6 +1,7 @@
-import React, { Suspense, lazy, Component } from 'react';
+import React, { Suspense, lazy, Component, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import axios from 'axios';
 import { AuthProvider } from './contexts/AuthContext';
 import { GameProvider } from './contexts/GameContext';
 import { WalletProvider } from './contexts/WalletContext';
@@ -10,9 +11,9 @@ import Layout from './components/common/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Play from './pages/Play';
 import { setCurrentCountry } from './utils/constants';
-import axios from 'axios';
+
 // ============================================================
-// ErrorBoundary (same as before)
+// ErrorBoundary
 // ============================================================
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -37,7 +38,7 @@ class ErrorBoundary extends Component {
       const errorMessage = this.state.error?.message || 'Unknown error';
       return (
         <div style={{ padding: '20px', color: '#fff', background: '#1a1a2e', minHeight: '100vh', fontFamily: 'monospace' }}>
-          <h1 style={{ color: '#f1c40f' }}>⚠️ Something went wrong</h1>
+          <h1 style={{ color: '#d4a745' }}>⚠️ Something went wrong</h1>
           <pre style={{ color: '#ff6b6b', whiteSpace: 'pre-wrap', background: '#2d2d44', padding: '12px', borderRadius: '8px' }}>
             {errorMessage}
           </pre>
@@ -47,7 +48,7 @@ class ErrorBoundary extends Component {
               {this.state.error?.stack || 'No stack available'}
             </pre>
           </details>
-          <button onClick={() => window.location.reload()} style={{ marginTop: '16px', padding: '8px 20px', background: '#f1c40f', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          <button onClick={() => window.location.reload()} style={{ marginTop: '16px', padding: '8px 20px', background: '#d4a745', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
             Reload
           </button>
         </div>
@@ -85,7 +86,7 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 // ============================================================
 function App() {
   // Fix mobile viewport height
-  React.useEffect(() => {
+  useEffect(() => {
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -93,6 +94,22 @@ function App() {
     setVH();
     window.addEventListener('resize', setVH);
     return () => window.removeEventListener('resize', setVH);
+  }, []);
+
+  // ✅ Fetch country from backend on mount
+  useEffect(() => {
+    const fetchCountry = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await axios.get(`${API_URL}/settings/country`);
+        if (response.data?.success && response.data?.country) {
+          setCurrentCountry(response.data.country);
+        }
+      } catch (error) {
+        console.log('Using default country');
+      }
+    };
+    fetchCountry();
   }, []);
 
   return (
@@ -157,19 +174,4 @@ function App() {
   );
 }
 
-
-// Inside the App component, add this useEffect after the existing one
-useEffect(() => {
-  const fetchCountry = async () => {
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/settings/country`);
-      if (response.data?.success && response.data?.country) {
-        setCurrentCountry(response.data.country);
-      }
-    } catch (error) {
-      console.log('Using default country');
-    }
-  };
-  fetchCountry();
-}, []);
 export default App;
