@@ -28,7 +28,6 @@ const getGameProvider = (game) => {
 const getGameRTP = (game) => {
   if (game.rtpOverride) return game.rtpOverride;
   if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
-    // RTP array from Slotopol – return the last value (highest RTP)
     return game.rtp[game.rtp.length - 1];
   }
   if (typeof game.rtp === 'number') return game.rtp;
@@ -55,20 +54,16 @@ const GameCard = ({ game }) => {
   const rtp = getGameRTP(game);
   const favorite = isFavorite(game.id);
 
-  // Build placeholder image
-  const placeholderImage = `https://via.placeholder.com/300x400/1a1a2e/ffffff?text=${encodeURIComponent(displayName.substring(0, 15))}`;
+  // Build placeholder image with gold theme
+  const placeholderImage = `https://via.placeholder.com/300x400/161f33/d4a745?text=${encodeURIComponent(displayName.substring(0, 15))}`;
   const imageUrl = game.image_url || game.image || placeholderImage;
 
-  // ============================================================
-  // ✅ FIXED: Launch game using navigate
-  // ============================================================
   const handlePlay = (e) => {
     e.stopPropagation();
     if (!isAuthenticated) {
       toast.error('Please login to play');
       return;
     }
-    // Navigate to game play page with game ID
     navigate(`/play/${encodeURIComponent(game.id)}`);
   };
 
@@ -148,7 +143,7 @@ const GameCard = ({ game }) => {
           }`}
         >
           <motion.button
-            className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg shadow-primary-500/25"
+            className="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-primary-500 to-primary-dark text-dark-900 rounded-full font-bold text-xs md:text-sm flex items-center gap-2 shadow-lg shadow-primary-500/25"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             onClick={handlePlay}
