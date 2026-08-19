@@ -3,28 +3,34 @@
 @tailwind utilities;
 
 /* ============================================================
-   ROOT VARIABLES – Set by ThemeContext
+   ROOT VARIABLES – N999Bet Gold Theme
    ============================================================ */
 :root {
   --vh: 1vh;
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.08);
   --max-width: 1200px;
   --header-height: 60px;
   --mobile-header-height: 56px;
 
-  /* Theme colors – these are set by ThemeContext */
-  --primary: #FF6B00;
-  --primary-light: #FF8C38;
-  --primary-dark: #CC5500;
-  --secondary: #FFAA00;
-  --bg-primary: #0A0A0F;
-  --bg-secondary: #1A1A2E;
-  --text-primary: #FFFFFF;
-  --text-secondary: #A0A0B0;
-  --gradient-start: #FF6B00;
-  --gradient-end: #FFAA00;
+  /* Theme colors – set by ThemeContext */
+  --primary: #d4a745;
+  --primary-light: #f0d080;
+  --primary-dark: #b8922f;
+  --secondary: #f0d080;
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111927;
+  --bg-card: #161f33;
+  --bg-card-hover: #1c2842;
+  --bg-input: #0d1422;
+  --text-primary: #ffffff;
+  --text-secondary: #e8e8f0;
+  --text-muted: #8899bb;
+  --border-subtle: rgba(212, 167, 69, 0.15);
+  --border-gold: rgba(212, 167, 69, 0.40);
+  --gradient-start: #d4a745;
+  --gradient-end: #b8922f;
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.60);
+  --shadow-glow: 0 0 40px rgba(212, 167, 69, 0.08);
 }
 
 /* ============================================================
@@ -65,17 +71,9 @@ body {
 /* ============================================================
    SCROLLBAR
    ============================================================ */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--secondary);
-  border-radius: 10px;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
 
 /* ============================================================
    CONTAINER
@@ -88,42 +86,22 @@ body {
   padding-left: 16px;
   padding-right: 16px;
 }
-
-@media (min-width: 640px) {
-  .container { padding-left: 24px; padding-right: 24px; }
-}
-@media (min-width: 1024px) {
-  .container { padding-left: 32px; padding-right: 32px; }
-}
-@media (min-width: 1280px) {
-  .container { padding-left: 40px; padding-right: 40px; }
-}
-
-/* ============================================================
-   SAFE AREA
-   ============================================================ */
-.safe-area-bottom {
-  padding-bottom: var(--safe-area-inset-bottom);
-}
+@media (min-width: 640px) { .container { padding-left: 24px; padding-right: 24px; } }
+@media (min-width: 1024px) { .container { padding-left: 32px; padding-right: 32px; } }
+@media (min-width: 1280px) { .container { padding-left: 40px; padding-right: 40px; } }
 
 /* ============================================================
    GLASSMORPHISM
    ============================================================ */
 .glass {
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-}
-.glass-light {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 /* ============================================================
-   GRADIENT TEXT – Uses theme colors
+   GRADIENT TEXT – N999Bet Gold
    ============================================================ */
 .gradient-text {
   background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
@@ -135,31 +113,20 @@ body {
 /* ============================================================
    GLOW EFFECTS
    ============================================================ */
-.glow {
-  box-shadow: 0 0 30px rgba(255, 107, 0, 0.15);
-}
-.glow-hover:hover {
-  box-shadow: 0 0 40px rgba(255, 107, 0, 0.25);
-}
+.glow { box-shadow: 0 0 30px rgba(212, 167, 69, 0.15); }
+.glow-hover:hover { box-shadow: 0 0 40px rgba(212, 167, 69, 0.25); }
 
 /* ============================================================
    ANIMATIONS
    ============================================================ */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.animate-float { animation: float 3s ease-in-out infinite; }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 0, 0.2); }
-  50% { box-shadow: 0 0 40px rgba(255, 107, 0, 0.4); }
+  0%, 100% { box-shadow: 0 0 20px rgba(212, 167, 69, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(212, 167, 69, 0.4); }
 }
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
 @keyframes shimmer {
   0% { background-position: -1000px 0; }
@@ -172,14 +139,6 @@ body {
 }
 
 /* ============================================================
-   MARQUEE
-   ============================================================ */
-@keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
-
-/* ============================================================
    CARD HOVER
    ============================================================ */
 .card-hover {
@@ -187,18 +146,8 @@ body {
 }
 .card-hover:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-
-/* ============================================================
-   HIDE SCROLLBAR
-   ============================================================ */
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  border-color: var(--border-gold);
 }
 
 /* ============================================================
@@ -211,31 +160,7 @@ body {
 }
 .swiper-pagination-bullet-active {
   background: var(--primary) !important;
-  box-shadow: 0 0 20px rgba(255, 107, 0, 0.5);
-}
-
-/* ============================================================
-   TOUCH IMPROVEMENTS
-   ============================================================ */
-button, a, input, select, textarea {
-  touch-action: manipulation;
-}
-input, select, textarea {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-/* ============================================================
-   RESPONSIVE UTILITY CLASSES
-   ============================================================ */
-@media (max-width: 639px) {
-  .hidden-mobile { display: none !important; }
-}
-@media (min-width: 640px) {
-  .show-mobile { display: none !important; }
-}
-@media (min-width: 640px) and (max-width: 1023px) {
-  .hidden-tablet { display: none !important; }
+  box-shadow: 0 0 20px rgba(212, 167, 69, 0.5);
 }
 
 /* ============================================================
@@ -251,16 +176,6 @@ input, select, textarea {
 @media (min-width: 768px) { .game-grid { gap: 20px; grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1024px) { .game-grid { gap: 24px; grid-template-columns: repeat(5, 1fr); } }
 @media (min-width: 1280px) { .game-grid { grid-template-columns: repeat(6, 1fr); } }
-
-/* ============================================================
-   PROVIDER FILTER
-   ============================================================ */
-.provider-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-@media (min-width: 640px) { .provider-filter { gap: 8px; } }
 
 /* ============================================================
    BANNER HEIGHTS
@@ -279,19 +194,19 @@ input, select, textarea {
   left: 0;
   right: 0;
   z-index: 40;
-  background: rgba(26, 26, 46, 0.95);
+  background: rgba(17, 25, 39, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--border-subtle);
 }
 
 /* ============================================================
-   LOADING SPINNER
+   LOADING SPINNER – N999Bet Gold
    ============================================================ */
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(255, 107, 0, 0.2);
+  border: 4px solid rgba(212, 167, 69, 0.2);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -300,3 +215,9 @@ input, select, textarea {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
