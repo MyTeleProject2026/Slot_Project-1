@@ -69,7 +69,7 @@ body {
 }
 
 /* ============================================================
-   SCROLLBAR
+   SCROLLBAR – N999Bet Gold
    ============================================================ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
@@ -175,7 +175,7 @@ body {
 @media (min-width: 640px) { .game-grid { gap: 16px; grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 768px) { .game-grid { gap: 20px; grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1024px) { .game-grid { gap: 24px; grid-template-columns: repeat(5, 1fr); } }
-@media (min-width: 1280px) { .game-grid { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 1280px) { .game-grid { gap: 28px; grid-template-columns: repeat(6, 1fr); } }
 
 /* ============================================================
    BANNER HEIGHTS
@@ -221,3 +221,57 @@ body {
    ============================================================ */
 .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ============================================================
+   BUTTONS – N999Bet Gold
+   ============================================================ */
+.btn-primary {
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  color: #0a0e17;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(212, 167, 69, 0.3);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: #0a0e17;
+}
+
+/* ============================================================
+   CARDS – N999Bet Gold
+   ============================================================ */
+.card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s;
+}
+.card:hover {
+  border-color: var(--border-gold);
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+}
