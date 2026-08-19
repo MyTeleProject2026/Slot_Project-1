@@ -8,7 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import Layout from './components/common/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
-
+import Play from './pages/Play';
 // ============================================================
 // ErrorBoundary (same as before)
 // ============================================================
@@ -129,6 +129,7 @@ function App() {
                         <Route path="/games/sports" element={<Sports />} />
                         <Route path="/games/fishing" element={<Fishing />} />
                         <Route path="/games/lotto" element={<Lotto />} />
+                        <Route path="/play/:gameId" element={<Play />} />
                         <Route path="/promotions" element={<Promotions />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/wallet" element={<Wallet />} />
