@@ -13,7 +13,6 @@ export const api = axios.create({
 // Request interceptor - add token
 api.interceptors.request.use(
   (config) => {
-    // Ensure headers object exists
     if (!config.headers) {
       config.headers = {};
     }
@@ -31,27 +30,25 @@ api.interceptors.request.use(
 
 // Response interceptor - handle token refresh and rate limiting
 api.interceptors.response.use(
-  (response) => {
-    // Ensure response data is valid
-    if (!response.data) {
-      console.warn('Empty response data');
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
-    // Handle 429 Too Many Requests - retry after delay
-    if (error.response?.status === 429 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const delay = Math.min(1000 * Math.pow(2, originalRequest._retryCount || 0), 30000);
+
+    // --- Rate limiting (429) with exponential backoff ---
+    if (error.response?.status === 429) {
       originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
-      console.warn(`Rate limit hit, retrying after ${delay}ms...`);
+      const maxRetries = 3;
+      if (originalRequest._retryCount > maxRetries) {
+        console.error('Max retries reached for 429');
+        return Promise.reject(error);
+      }
+      const delay = Math.min(1000 * Math.pow(2, originalRequest._retryCount), 30000);
+      console.warn(`Rate limit hit, retry ${originalRequest._retryCount} after ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return api(originalRequest);
     }
-    
-    // Handle 401 Unauthorized - refresh token
+
+    // --- Unauthorized (401) – refresh token ---
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -69,7 +66,7 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
