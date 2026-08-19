@@ -44,8 +44,10 @@ api.interceptors.response.use(
     // Handle 429 Too Many Requests - retry after delay
     if (error.response?.status === 429 && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.warn('Rate limit hit, retrying after 5 seconds...');
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+      const delay = Math.min(1000 * Math.pow(2, originalRequest._retryCount || 0), 30000);
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+      console.warn(`Rate limit hit, retrying after ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
       return api(originalRequest);
     }
     
