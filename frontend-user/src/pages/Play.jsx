@@ -4,8 +4,18 @@ import { useGames } from '../hooks/useGames';
 import { useWallet } from '../hooks/useWallet';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { FaArrowLeft, FaCoins, FaDice, FaTrophy } from 'react-icons/fa';
+import { FaArrowLeft, FaCoins, FaDice } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+
+// Helper: Get RTP (last value in array)
+const getRtpDisplay = (game) => {
+  if (game.rtpOverride) return game.rtpOverride.toFixed(2);
+  if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
+    return game.rtp[game.rtp.length - 1].toFixed(2);
+  }
+  if (typeof game.rtp === 'number') return game.rtp.toFixed(2);
+  return 'N/A';
+};
 
 const Play = () => {
   const { gameId } = useParams();
@@ -20,6 +30,7 @@ const Play = () => {
   const [spinResult, setSpinResult] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameError, setGameError] = useState(null);
+  const [startError, setStartError] = useState(null);
 
   // Find the game from the list
   useEffect(() => {
@@ -34,6 +45,7 @@ const Play = () => {
       const found = games.find(g => g.id === decodedGameId);
       if (found) {
         setGame(found);
+        setStartError(null);
       } else {
         setGameError('Game not found');
         toast.error('Game not found');
@@ -44,7 +56,7 @@ const Play = () => {
 
   // Auto-start game when game is loaded
   useEffect(() => {
-    if (game && !session && !isPlaying) {
+    if (game && !session && !isPlaying && !startError) {
       handleStartGame();
     }
   }, [game]);
@@ -52,19 +64,25 @@ const Play = () => {
   const handleStartGame = async () => {
     if (!game || isPlaying) return;
     setIsPlaying(true);
+    setStartError(null);
     try {
       const result = await startGame(game.id, bet, 20);
+      // result is the full response from backend: { success, sessionId, session, wallet }
       if (result && result.success !== false) {
         setSession(result.session || result);
         setSpinResult(null);
         await refreshBalance();
         toast.success('Game started!');
       } else {
-        toast.error(result?.error || 'Failed to start game');
+        const errorMsg = result?.error || 'Failed to start game';
+        setStartError(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
       console.error('Start game error:', error);
-      toast.error(error.response?.data?.error || 'Failed to start game');
+      const msg = error.response?.data?.error || error.message || 'Failed to start game';
+      setStartError(msg);
+      toast.error(msg);
     } finally {
       setIsPlaying(false);
     }
@@ -144,16 +162,7 @@ const Play = () => {
   const displayName = game.name || 'Game';
   const displayProvider = game.provider || 'Unknown Provider';
   const currentBalance = balance?.main || 0;
-
-  // ✅ FIX: RTP display – extract last value from array
-  const getRtpDisplay = () => {
-    if (game.rtpOverride) return game.rtpOverride.toFixed(2);
-    if (game.rtp && Array.isArray(game.rtp) && game.rtp.length > 0) {
-      return game.rtp[game.rtp.length - 1].toFixed(2);
-    }
-    if (typeof game.rtp === 'number') return game.rtp.toFixed(2);
-    return 'N/A';
-  };
+  const rtpDisplay = getRtpDisplay(game);
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -165,7 +174,6 @@ const Play = () => {
       </button>
 
       <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl border border-dark-700/30 p-4 md:p-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-3">
           <div>
             <h1 className="text-2xl font-bold text-white">{displayName}</h1>
@@ -179,7 +187,18 @@ const Play = () => {
           </div>
         </div>
 
-        {/* Game Display Area */}
+        {startError && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4 text-red-400 text-sm flex items-center gap-2">
+            <span>⚠️ {startError}</span>
+            <button
+              onClick={handleStartGame}
+              className="ml-auto px-3 py-1 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         <div className="bg-dark-900/50 rounded-xl p-4 md:p-6 mb-4 min-h-[250px] flex items-center justify-center">
           {spinResult ? (
             <div className="text-center w-full">
@@ -224,7 +243,7 @@ const Play = () => {
             <div className="text-center text-gray-500">
               <span className="text-6xl block mb-3">🎰</span>
               <p className="text-lg">{isPlaying ? 'Starting game...' : 'Loading game...'}</p>
-              {session && (
+              {session && !startError && (
                 <button
                   onClick={handleSpin}
                   disabled={isPlaying}
@@ -237,7 +256,6 @@ const Play = () => {
           )}
         </div>
 
-        {/* Controls */}
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <label className="text-gray-400 text-sm">Bet:</label>
@@ -255,7 +273,7 @@ const Play = () => {
             <button
               onClick={handleStartGame}
               disabled={isPlaying}
-              className="px-6 py-2 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-lg font-semibold hover:shadow-lg hover:shadow-primary-500/25 transition disabled:opacity-50"
+              className="px-6 py-2 bg-gradient-to-r from-primary-500 to-primary-dark text-dark-900 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
             >
               {isPlaying ? 'Starting...' : 'Start Game'}
             </button>
@@ -265,7 +283,7 @@ const Play = () => {
             <button
               onClick={handleSpin}
               disabled={isPlaying}
-              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/25 transition disabled:opacity-50"
+              className="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
             >
               {isPlaying ? 'Spinning...' : 'Spin'}
             </button>
@@ -276,9 +294,8 @@ const Play = () => {
           </div>
         </div>
 
-        {/* Info */}
         <div className="mt-4 text-xs text-gray-500 border-t border-dark-700/50 pt-4 flex flex-wrap gap-4">
-          <span>RTP: {getRtpDisplay()}%</span>
+          <span>RTP: {rtpDisplay}%</span>
           <span>Provider: {displayProvider}</span>
           <span>Game ID: {game.id}</span>
         </div>
