@@ -4,7 +4,7 @@ const Transaction = require('../models/Transaction');
 const AdminBalance = require('../models/AdminBalance');
 const Game = require('../models/Game');
 const pool = require('../config/database');
-
+const GameMetadata = require('../models/GameMetadata');
 // ============================================================
 // USER MANAGEMENT
 // ============================================================
@@ -185,14 +185,44 @@ exports.rejectTransaction = async (req, res) => {
   }
 };
 
+
 // ============================================================
-// GAME MANAGEMENT
+// GAME MANAGEMENT (UPDATED – Uses GameMetadata for Slotopol games)
 // ============================================================
 
 exports.getGames = async (req, res) => {
   try {
-    const games = await Game.getAll();
-    res.json({ success: true, games });
+    // Fetch games from Slotopol
+    let games = await slotopolService.getGameList();
+    if (!Array.isArray(games)) {
+      games = games.list || games.data || [];
+    }
+
+    // Fetch all metadata
+    const metadata = await GameMetadata.find();
+    const metaMap = {};
+    metadata.forEach(m => metaMap[m.gameId] = m);
+
+    const enriched = games.map(game => {
+      const meta = metaMap[game.ID] || {};
+      return {
+        id: game.ID,
+        name: game.Name || game.name || 'Unknown',
+        provider: game.Prov || game.provider || 'unknown',
+        isActive: meta.isActive !== false,
+        minBet: meta.minBet || 0.1,
+        maxBet: meta.maxBet || 100,
+        rtpOverride: meta.rtpOverride || null,
+        difficulty: meta.difficulty || 'medium',
+        order: meta.order || 0,
+        tags: meta.tags || [],
+      };
+    });
+
+    // Sort by order
+    enriched.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    res.json({ success: true, games: enriched });
   } catch (error) {
     console.error('Get games error:', error);
     res.status(500).json({ success: false, error: 'Failed to get games' });
@@ -201,8 +231,34 @@ exports.getGames = async (req, res) => {
 
 exports.getGameById = async (req, res) => {
   try {
-    const game = await Game.findById(req.params.id);
-    if (!game) return res.status(404).json({ success: false, error: 'Game not found' });
+    const gameId = req.params.id;
+
+    // Fetch from Slotopol
+    let games = await slotopolService.getGameList();
+    if (!Array.isArray(games)) {
+      games = games.list || games.data || [];
+    }
+    const slotopolGame = games.find(g => g.ID === gameId);
+    if (!slotopolGame) {
+      return res.status(404).json({ success: false, error: 'Game not found' });
+    }
+
+    // Fetch metadata
+    const meta = await GameMetadata.findOne({ gameId });
+
+    const game = {
+      id: slotopolGame.ID,
+      name: slotopolGame.Name || slotopolGame.name,
+      provider: slotopolGame.Prov || slotopolGame.provider || 'unknown',
+      isActive: meta?.isActive !== false,
+      minBet: meta?.minBet || 0.1,
+      maxBet: meta?.maxBet || 100,
+      rtpOverride: meta?.rtpOverride || null,
+      difficulty: meta?.difficulty || 'medium',
+      order: meta?.order || 0,
+      tags: meta?.tags || [],
+    };
+
     res.json({ success: true, game });
   } catch (error) {
     console.error('Get game by id error:', error);
@@ -211,21 +267,36 @@ exports.getGameById = async (req, res) => {
 };
 
 exports.createGame = async (req, res) => {
+  // Games come from Slotopol – we only create metadata entries
   try {
-    const id = await Game.create(req.body);
-    res.status(201).json({ success: true, id });
+    const { gameId, ...metadata } = req.body;
+    if (!gameId) {
+      return res.status(400).json({ success: false, error: 'gameId is required' });
+    }
+    const updated = await GameMetadata.findOneAndUpdate(
+      { gameId },
+      metadata,
+      { upsert: true, new: true }
+    );
+    res.status(201).json({ success: true, data: updated });
   } catch (error) {
-    console.error('Create game error:', error);
-    res.status(500).json({ success: false, error: 'Failed to create game' });
+    console.error('Create game metadata error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create game metadata' });
   }
 };
 
 exports.updateGame = async (req, res) => {
   try {
     const { id } = req.params;
-    const updated = await Game.update(id, req.body);
-    if (!updated) return res.status(404).json({ success: false, error: 'Game not found' });
-    res.json({ success: true, message: 'Game updated' });
+    const { isActive, minBet, maxBet, rtpOverride, difficulty, order, tags } = req.body;
+
+    const updated = await GameMetadata.findOneAndUpdate(
+      { gameId: id },
+      { isActive, minBet, maxBet, rtpOverride, difficulty, order, tags },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, data: updated });
   } catch (error) {
     console.error('Update game error:', error);
     res.status(500).json({ success: false, error: 'Failed to update game' });
@@ -235,9 +306,13 @@ exports.updateGame = async (req, res) => {
 exports.deleteGame = async (req, res) => {
   try {
     const { id } = req.params;
-    const deleted = await Game.delete(id);
-    if (!deleted) return res.status(404).json({ success: false, error: 'Game not found' });
-    res.json({ success: true, message: 'Game deleted' });
+    // Soft delete – just deactivate
+    const updated = await GameMetadata.findOneAndUpdate(
+      { gameId: id },
+      { isActive: false },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true, message: 'Game deactivated' });
   } catch (error) {
     console.error('Delete game error:', error);
     res.status(500).json({ success: false, error: 'Failed to delete game' });
@@ -247,19 +322,25 @@ exports.deleteGame = async (req, res) => {
 exports.adjustGameRTP = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rtpAdjustment } = req.body;
-    const game = await Game.findById(id);
-    if (!game) return res.status(404).json({ success: false, error: 'Game not found' });
-    await Game.updateRTP(id, rtpAdjustment, req.userId);
+    const { rtpAdjustment } = req.body; // This is the new RTP override
+
+    const updated = await GameMetadata.findOneAndUpdate(
+      { gameId: id },
+      { rtpOverride: rtpAdjustment },
+      { upsert: true, new: true }
+    );
+
+    // Log activity
     const activityLog = require('../models/AdminActivityLog');
     await activityLog.create({
       adminId: req.userId,
       action: 'ADJUST_GAME_RTP',
       targetType: 'game',
       targetId: id,
-      description: `RTP adjusted to ${rtpAdjustment}%`
+      description: `RTP set to ${rtpAdjustment}%`
     });
-    res.json({ success: true, message: 'Game RTP adjusted' });
+
+    res.json({ success: true, message: 'Game RTP adjusted', data: updated });
   } catch (error) {
     console.error('Adjust game RTP error:', error);
     res.status(500).json({ success: false, error: 'Failed to adjust RTP' });
@@ -269,8 +350,35 @@ exports.adjustGameRTP = async (req, res) => {
 exports.adjustWinRate = async (req, res) => {
   try {
     const { id } = req.params;
-    const { winRateAdjustment } = req.body;
-    res.json({ success: true, message: 'Win rate adjustment (stub)' });
+    const { winRateAdjustment } = req.body; // This is actually difficulty
+
+    // Map winRate to difficulty levels
+    const difficultyMap = {
+      'easy': 'easy',
+      'medium': 'medium',
+      'hard': 'hard',
+      'very_hard': 'very_hard'
+    };
+
+    const difficulty = difficultyMap[winRateAdjustment] || 'medium';
+
+    const updated = await GameMetadata.findOneAndUpdate(
+      { gameId: id },
+      { difficulty },
+      { upsert: true, new: true }
+    );
+
+    // Log activity
+    const activityLog = require('../models/AdminActivityLog');
+    await activityLog.create({
+      adminId: req.userId,
+      action: 'ADJUST_WIN_RATE',
+      targetType: 'game',
+      targetId: id,
+      description: `Win rate set to ${winRateAdjustment} (difficulty: ${difficulty})`
+    });
+
+    res.json({ success: true, message: 'Win rate adjusted', data: updated });
   } catch (error) {
     console.error('Adjust win rate error:', error);
     res.status(500).json({ success: false, error: 'Failed to adjust win rate' });
