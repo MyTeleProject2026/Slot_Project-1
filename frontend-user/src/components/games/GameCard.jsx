@@ -5,6 +5,32 @@ import { useGames } from '../../hooks/useGames';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
+// Helper to get game display name
+const getGameDisplayName = (game) => {
+  if (game.name && game.name !== 'Unknown Game') return game.name;
+  // Try to get from aliases
+  if (game.aliases && game.aliases.length > 0) {
+    return game.aliases[0].name || 'Unknown Game';
+  }
+  return 'Unknown Game';
+};
+
+const getGameProvider = (game) => {
+  if (game.provider && game.provider !== 'unknown') return game.provider;
+  if (game.aliases && game.aliases.length > 0) {
+    return game.aliases[0].prov || 'Unknown Provider';
+  }
+  return 'Unknown Provider';
+};
+
+const getGameRTP = (game) => {
+  if (game.rtp && game.rtp.length > 0) {
+    return game.rtp[game.rtp.length - 1];
+  }
+  if (game.rtpOverride) return game.rtpOverride;
+  return null;
+};
+
 const GameCard = ({ game }) => {
   const { isAuthenticated } = useAuth();
   const { toggleFavorite, isFavorite } = useGames();
@@ -19,7 +45,14 @@ const GameCard = ({ game }) => {
     );
   }
 
+  const displayName = getGameDisplayName(game);
+  const provider = getGameProvider(game);
+  const rtp = getGameRTP(game);
   const favorite = isFavorite(game.id);
+
+  // Placeholder image using game name
+  const placeholderImage = `https://via.placeholder.com/300x400/1a1a2e/ffffff?text=${encodeURIComponent(displayName.substring(0, 20))}`;
+  const imageUrl = game.image_url || game.image || placeholderImage;
 
   const handlePlay = (e) => {
     e.stopPropagation();
@@ -27,7 +60,7 @@ const GameCard = ({ game }) => {
       toast.error('Please login to play');
       return;
     }
-    toast.success(`Launching ${game.name || 'game'}...`);
+    toast.success(`Loading ${displayName}...`);
   };
 
   const handleFavorite = (e) => {
@@ -54,28 +87,22 @@ const GameCard = ({ game }) => {
         {!imageLoaded && (
           <div className="absolute inset-0 shimmer"></div>
         )}
-        {game.image_url ? (
-          <img
-            src={game.image_url}
-            alt={game.name || 'Game'}
-            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            loading="lazy"
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-dark-800 to-dark-900">
-            <span className="text-4xl md:text-6xl opacity-20">🎰</span>
-          </div>
-        )}
+        <img
+          src={imageUrl}
+          alt={displayName}
+          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
+          loading="lazy"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageLoaded(true)}
+        />
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {game.is_hot && (
-            <span className="px-2 py-0.5 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[10px] font-bold rounded-full animate-pulse shadow-lg">
-              HOT
+          {rtp && rtp > 97 && (
+            <span className="px-2 py-0.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-[10px] font-bold rounded-full shadow-lg">
+              VIP
             </span>
           )}
           {game.is_new && (
@@ -101,7 +128,7 @@ const GameCard = ({ game }) => {
         {/* Provider name */}
         <div className="absolute bottom-2 left-2 right-2">
           <span className="px-2 py-0.5 bg-black/60 backdrop-blur-sm text-white text-[10px] rounded-full">
-            {game.provider_name || 'Unknown Provider'}
+            {provider}
           </span>
         </div>
 
@@ -125,11 +152,11 @@ const GameCard = ({ game }) => {
 
       <div className="p-2 md:p-2.5">
         <h3 className="text-xs md:text-sm font-semibold truncate text-white">
-          {game.name || 'Unnamed Game'}
+          {displayName}
         </h3>
         <div className="flex items-center justify-between mt-1">
           <span className="text-[10px] md:text-xs text-gray-400">
-            RTP: {game.rtp ? `${game.rtp}%` : 'N/A'}
+            RTP: {rtp ? `${rtp.toFixed(2)}%` : 'N/A'}
           </span>
           <span className="text-[10px] md:text-xs text-primary-400 font-bold">
             {game.max_multiplier ? `${game.max_multiplier}x` : '—'}
