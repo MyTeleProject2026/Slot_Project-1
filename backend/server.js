@@ -39,7 +39,8 @@ const io = new Server(httpServer, {
     credentials: true
   }
 });
-// After `const app = express();`
+
+// ============ TRUST PROXY (Critical for rate limiter) ============
 app.set('trust proxy', true);
 
 // ============ MIDDLEWARE ============
@@ -50,10 +51,11 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// Rate limiting
+// Rate limiting (with explicit trustProxy to avoid ERR_ERL_PERMISSIVE_TRUST_PROXY)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200,
+  trustProxy: true, // ✅ THIS LINE FIXES THE PROXY ERROR
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
