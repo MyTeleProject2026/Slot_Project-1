@@ -3,9 +3,11 @@ const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const { generateToken, generateRefreshToken } = require('../config/auth');
 const { ROLES } = require('../config/roles');
+const pool = require('../config/database'); // For raw SQL updates
+const slotopolService = require('../services/slotopolService'); // NEW
 
 // ============================================================
-// Environment-based Admin Authentication
+// Environment-based Admin Authentication (Keep existing)
 // ============================================================
 
 function getAdminFromEnv(username, password) {
@@ -34,10 +36,6 @@ function getAdminFromEnv(username, password) {
   return null;
 }
 
-// ============================================================
-// Get Virtual Admin by ID (for refresh token & getMe)
-// ============================================================
-
 function getVirtualAdminById(userId) {
   const virtualAdmins = [
     { id: 99991, role: ROLES.SUPER_ADMIN, username: process.env.SUPER_ADMIN_USERNAME },
@@ -62,7 +60,7 @@ function getVirtualAdminById(userId) {
 }
 
 // ============================================================
-// Registration
+// Registration (UPDATED to mirror user to Slotopol)
 // ============================================================
 
 exports.register = async (req, res) => {
@@ -72,13 +70,33 @@ exports.register = async (req, res) => {
     if (existing) return res.status(400).json({ success: false, error: 'Username taken' });
     const existingEmail = await User.findByEmail(email);
     if (existingEmail) return res.status(400).json({ success: false, error: 'Email registered' });
+    
     const hashed = await bcrypt.hash(password, 10);
     const userId = await User.create({ username, email, password: hashed, fullName, phone });
     await Wallet.create(userId);
+
+    // --- NEW: Mirror the user to Slotopol ---
+    let slotopolUid = null;
+    try {
+      slotopolUid = await slotopolService.createSlotopolUser(email, fullName || username, password);
+      // Save the Slotopol UID into the N999Bet database
+      await pool.query('UPDATE users SET slotopol_uid = ? WHERE id = ?', [slotopolUid, userId]);
+    } catch (error) {
+      console.warn('Slotopol user sync failed, but local user created:', error.message);
+      // Continue anyway, admin can retry later
+    }
+    // -----------------------------------------
+
     const user = await User.findById(userId);
     const token = generateToken(userId, ROLES.USER);
     const refreshToken = generateRefreshToken(userId);
-    res.status(201).json({ success: true, token, refreshToken, user });
+    
+    res.status(201).json({ 
+      success: true, 
+      token, 
+      refreshToken, 
+      user: { ...user, slotopol_uid: slotopolUid } 
+    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ success: false, error: 'Registration failed' });
@@ -86,14 +104,12 @@ exports.register = async (req, res) => {
 };
 
 // ============================================================
-// Login (with Env Admin Support)
+// Login (Keep as is)
 // ============================================================
 
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-
-    // 1. Check if credentials match environment-based admin
     const adminUser = getAdminFromEnv(username, password);
     if (adminUser) {
       const token = generateToken(adminUser.id, adminUser.role);
@@ -108,7 +124,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 2. Fallback: regular database user
     const user = await User.findByUsername(username);
     if (!user) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     if (user.status !== 'active') return res.status(403).json({ success: false, error: 'Account inactive' });
@@ -126,18 +141,16 @@ exports.login = async (req, res) => {
 };
 
 // ============================================================
-// Refresh Token (with Virtual Admin Support)
+// Refresh Token & Get Me (Keep as is, they already handle virtual admins)
 // ============================================================
 
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ success: false, error: 'Refresh token required' });
-
     const decoded = require('../config/auth').verifyToken(refreshToken);
     if (!decoded) return res.status(401).json({ success: false, error: 'Invalid refresh token' });
 
-    // 1. Check if it's a virtual admin user
     const virtualAdmin = getVirtualAdminById(decoded.userId);
     if (virtualAdmin) {
       const token = generateToken(virtualAdmin.id, virtualAdmin.role);
@@ -151,10 +164,8 @@ exports.refreshToken = async (req, res) => {
       });
     }
 
-    // 2. Fallback: regular database user
     const user = await User.findById(decoded.userId);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-
     const token = generateToken(user.id, user.role);
     const newRefresh = generateRefreshToken(user.id);
     res.json({ success: true, token, refreshToken: newRefresh });
@@ -164,13 +175,8 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
-// ============================================================
-// Get Current User Info (with Virtual Admin Support)
-// ============================================================
-
 exports.getMe = async (req, res) => {
   try {
-    // 1. Check if it's a virtual admin user
     const virtualAdmin = getVirtualAdminById(req.userId);
     if (virtualAdmin) {
       return res.json({
@@ -179,8 +185,6 @@ exports.getMe = async (req, res) => {
         wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 },
       });
     }
-
-    // 2. Fallback: regular database user
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     const wallet = await Wallet.findByUserId(req.userId);
