@@ -1,6 +1,7 @@
 const GameSession = require('../models/GameSession');
 const GameMetadata = require('../models/GameMetadata');
 const slotopolService = require('../services/slotopolService');
+const pool = require('../config/database'); // For raw SQL queries
 
 // ============================================================
 // HELPER: Extract game info from Slotopol response
@@ -16,39 +17,26 @@ function extractGameInfo(game) {
   };
 }
 
-// ============================================================
-// CATEGORY MAPPING
-// ============================================================
 function getGameCategory(provider) {
   const map = {
-    'agt': 'slots',
-    'aristocrat': 'slots',
-    'betsoft': 'slots',
-    'ct interactive': 'slots',
-    'igt': 'slots',
-    'megajack': 'slots',
-    'netent': 'slots',
-    'novomatic': 'slots',
-    'playngo': 'slots',
-    'playtech': 'slots',
-    'slotopol': 'slots'
+    'agt': 'slots', 'aristocrat': 'slots', 'betsoft': 'slots',
+    'ct interactive': 'slots', 'igt': 'slots', 'megajack': 'slots',
+    'netent': 'slots', 'novomatic': 'slots', 'playngo': 'slots',
+    'playtech': 'slots', 'slotopol': 'slots'
   };
   return map[provider.toLowerCase()] || 'slots';
 }
 
 // ============================================================
-// PUBLIC ENDPOINTS
+// PUBLIC ENDPOINTS (Keep as is)
 // ============================================================
 
 exports.getAllGames = async (req, res) => {
   try {
     const { provider, category, search, hot, new: isNew } = req.query;
-
-    // 1. Fetch from Slotopol
     let games = await slotopolService.getGameList();
     if (!Array.isArray(games)) games = games.list || games.data || [];
 
-    // 2. Extract from aliases
     const extracted = games.map(game => {
       const info = extractGameInfo(game);
       return {
@@ -69,7 +57,6 @@ exports.getAllGames = async (req, res) => {
       };
     });
 
-    // 3. Merge with metadata
     const metadata = await GameMetadata.find();
     const metaMap = {};
     metadata.forEach(m => metaMap[m.gameId] = m);
@@ -88,23 +75,18 @@ exports.getAllGames = async (req, res) => {
       };
     });
 
-    // 4. Filters
     let filtered = enriched;
-
     if (provider) {
       const p = provider.toLowerCase();
       filtered = filtered.filter(g => g.provider.toLowerCase() === p);
     }
-
     if (category && category !== 'all' && category !== 'undefined') {
       filtered = filtered.filter(g => g.category === category);
     }
-
     if (search && search.trim()) {
       const s = search.toLowerCase().trim();
       filtered = filtered.filter(g => g.name.toLowerCase().includes(s));
     }
-
     if (hot === 'true') filtered = filtered.slice(0, 50);
     if (isNew === 'true') filtered = filtered.slice(0, 50);
 
@@ -118,10 +100,10 @@ exports.getAllGames = async (req, res) => {
 };
 
 exports.getAllProviders = async (req, res) => {
+  // ... Keep your existing code here ...
   try {
     let games = await slotopolService.getGameList();
     if (!Array.isArray(games)) games = games.list || games.data || [];
-
     const providerMap = {};
     games.forEach(game => {
       (game.aliases || []).forEach(alias => {
@@ -130,14 +112,12 @@ exports.getAllProviders = async (req, res) => {
         providerMap[prov]++;
       });
     });
-
     const providers = Object.keys(providerMap).map(name => ({
       name,
       game_count: providerMap[name],
       actual_game_count: providerMap[name],
     }));
     providers.sort((a, b) => b.game_count - a.game_count);
-
     res.json({ success: true, providers });
   } catch (error) {
     console.error('Get providers error:', error);
@@ -146,11 +126,11 @@ exports.getAllProviders = async (req, res) => {
 };
 
 exports.getGameById = async (req, res) => {
+  // ... Keep your existing code here ...
   try {
     const gameId = req.params.id;
     let games = await slotopolService.getGameList();
     if (!Array.isArray(games)) games = games.list || games.data || [];
-
     let found = null;
     for (const game of games) {
       const aliases = game.aliases || [];
@@ -162,9 +142,7 @@ exports.getGameById = async (req, res) => {
       }
       if (found) break;
     }
-
     if (!found) return res.status(404).json({ success: false, error: 'Game not found' });
-
     const meta = await GameMetadata.findOne({ gameId });
     res.json({
       success: true,
@@ -187,7 +165,7 @@ exports.getGameById = async (req, res) => {
 };
 
 // ============================================================
-// GAME SESSION ENDPOINTS (keep your existing code)
+// GAME SESSION ENDPOINTS (UPDATED to use real Slotopol UID)
 // ============================================================
 
 exports.startGame = async (req, res) => {
@@ -201,7 +179,15 @@ exports.startGame = async (req, res) => {
     const provider = parts[0];
     const game = parts.slice(1).join('/');
 
-    const sessionData = await slotopolService.startGame(userId, provider, game, betAmount || 1, selectedLines || 20);
+    // --- NEW: Fetch the user's Slotopol UID ---
+    const [rows] = await pool.query('SELECT slotopol_uid FROM users WHERE id = ?', [userId]);
+    if (!rows.length || !rows[0].slotopol_uid) {
+      return res.status(400).json({ success: false, error: 'User not linked to Slotopol. Please contact support.' });
+    }
+    const slotopolUid = rows[0].slotopol_uid;
+    // -----------------------------------------
+
+    const sessionData = await slotopolService.startGame(slotopolUid, provider, game, betAmount || 1, selectedLines || 20);
     const sessionId = await GameSession.create({
       userId,
       slotopolGameId: sessionData.gid,
