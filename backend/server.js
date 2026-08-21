@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const path = require('path');
 const { createServer } = require('http');
@@ -40,7 +39,7 @@ const io = new Server(httpServer, {
   }
 });
 
-// ============ TRUST PROXY (Critical for rate limiter) ============
+// ============ TRUST PROXY (Required for Render) ============
 app.set('trust proxy', true);
 
 // ============ MIDDLEWARE ============
@@ -50,18 +49,6 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
-
-// Rate limiting (with explicit trustProxy to avoid ERR_ERL_PERMISSIVE_TRUST_PROXY)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
-  trustProxy: true, // ✅ THIS LINE FIXES THE PROXY ERROR
-  message: {
-    success: false,
-    error: 'Too many requests from this IP, please try again later.'
-  }
-});
-app.use('/api', limiter);
 
 // CORS
 const corsOptions = {
