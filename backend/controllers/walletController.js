@@ -1,5 +1,7 @@
 const Wallet = require('../models/Wallet');
 const Transaction = require('../models/Transaction');
+const slotopolService = require('../services/slotopolService'); // NEW
+const pool = require('../config/database'); // To fetch slotopol_uid
 
 exports.getBalance = async (req, res) => {
   try {
@@ -18,12 +20,30 @@ exports.getBalance = async (req, res) => {
   }
 };
 
+// ============================================================
+// DEPOSITS (UPDATED to sync with Slotopol)
+// ============================================================
+
 exports.requestDeposit = async (req, res) => {
   try {
     const { amount, paymentMethod, bankAccountId } = req.body;
     const wallet = await Wallet.findByUserId(req.userId);
     if (!wallet) return res.status(404).json({ success: false, error: 'Wallet not found' });
+    
     const before = parseFloat(wallet.main_balance);
+    
+    // --- NEW: Credit the Slotopol wallet ---
+    const [rows] = await pool.query('SELECT slotopol_uid FROM users WHERE id = ?', [req.userId]);
+    if (rows.length && rows[0].slotopol_uid) {
+      try {
+        await slotopolService.adjustWallet(rows[0].slotopol_uid, amount);
+      } catch (error) {
+        console.warn('Slotopol deposit sync failed, but local transaction logged', error);
+        // Don't stop the local deposit, just warn
+      }
+    }
+    // ---------------------------------------
+
     const txId = await Transaction.create({
       userId: req.userId,
       type: 'deposit',
@@ -42,6 +62,10 @@ exports.requestDeposit = async (req, res) => {
   }
 };
 
+// ============================================================
+// WITHDRAWALS (UPDATED to deduct from Slotopol)
+// ============================================================
+
 exports.requestWithdraw = async (req, res) => {
   try {
     const { amount, bankAccountId } = req.body;
@@ -50,6 +74,18 @@ exports.requestWithdraw = async (req, res) => {
     const current = parseFloat(wallet.main_balance);
     if (current < amount) return res.status(400).json({ success: false, error: 'Insufficient balance' });
     if (amount < 500) return res.status(400).json({ success: false, error: 'Minimum withdraw 500 THB' });
+
+    // --- NEW: Deduct from the Slotopol wallet ---
+    const [rows] = await pool.query('SELECT slotopol_uid FROM users WHERE id = ?', [req.userId]);
+    if (rows.length && rows[0].slotopol_uid) {
+      try {
+        await slotopolService.adjustWallet(rows[0].slotopol_uid, -amount);
+      } catch (error) {
+        console.warn('Slotopol withdraw sync failed, but local transaction logged', error);
+      }
+    }
+    // -----------------------------------------
+
     const txId = await Transaction.create({
       userId: req.userId,
       type: 'withdraw',
@@ -68,6 +104,10 @@ exports.requestWithdraw = async (req, res) => {
   }
 };
 
+// ============================================================
+// READ-ONLY ENDPOINTS (Keep as is)
+// ============================================================
+
 exports.getTransactions = async (req, res) => {
   try {
     const { limit = 50, offset = 0 } = req.query;
@@ -81,7 +121,6 @@ exports.getTransactions = async (req, res) => {
 
 exports.getBankAccounts = async (req, res) => {
   try {
-    const pool = require('../config/database');
     const [rows] = await pool.query('SELECT * FROM bank_accounts WHERE user_id = ? ORDER BY is_default DESC', [req.userId]);
     res.json({ success: true, bankAccounts: rows });
   } catch (error) {
@@ -93,7 +132,6 @@ exports.getBankAccounts = async (req, res) => {
 exports.addBankAccount = async (req, res) => {
   try {
     const { bankName, accountName, accountNumber, bankCode, isDefault } = req.body;
-    const pool = require('../config/database');
     const [existing] = await pool.query('SELECT id FROM bank_accounts WHERE user_id = ? AND account_number = ?', [req.userId, accountNumber]);
     if (existing.length) return res.status(400).json({ success: false, error: 'Account already exists' });
     if (isDefault) {
@@ -114,7 +152,6 @@ exports.updateBankAccount = async (req, res) => {
   try {
     const { id } = req.params;
     const { bankName, accountName, accountNumber, bankCode, isDefault } = req.body;
-    const pool = require('../config/database');
     const [account] = await pool.query('SELECT * FROM bank_accounts WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (!account.length) return res.status(404).json({ success: false, error: 'Account not found' });
     if (isDefault) {
@@ -134,7 +171,6 @@ exports.updateBankAccount = async (req, res) => {
 exports.deleteBankAccount = async (req, res) => {
   try {
     const { id } = req.params;
-    const pool = require('../config/database');
     const [result] = await pool.query('DELETE FROM bank_accounts WHERE id = ? AND user_id = ?', [id, req.userId]);
     if (result.affectedRows === 0) return res.status(404).json({ success: false, error: 'Account not found' });
     res.json({ success: true, message: 'Bank account deleted' });
