@@ -1,0 +1,8 @@
+{
+  "name": "slot_project_1",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "echo \"Use specific package.json in each subproject\" && exit 0"
+  }
+}
