@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0-employee-admin-country-currency",
+  "baseline": "N999Bet_FINAL_RELEASE_v1_0_0_RC1.zip",
+  "changes": [
+    "Built a functional N999Bet employee-admin React application with login, dashboard, users, deposits, withdrawals, transactions, games and reports.",
+    "Added employee dashboard API with aggregate counts.",
+    "Made employee transaction approval/rejection status-safe and transactional.",
+    "Removed per-customer Slotopol user synchronization from N999Bet registration.",
+    "Made frontend-user production API configuration explicit instead of silently using an old Render test backend.",
+    "Added country context and server-driven country/currency refresh for customer UI.",
+    "Replaced major hard-coded THB customer-facing amounts in wallet/deposit/withdraw/home/promotions/referral/leaderboard with the configured currency.",
+    "Cleaned backend CORS to use configured environment origins."
+  ],
+  "verification": {
+    "backend_node_syntax": "passed",
+    "frontend_build": "not run because dependency installation timed out in this environment",
+    "live_render_test": "not run",
+    "live_slotopol_test": "not run"
+  },
+  "production_note": "This release is an implementation update, not a claim of live-money certification. Provider credentials, database schema, payment integrations, compliance, staging tests and live end-to-end reconciliation remain deployment responsibilities."
+}
