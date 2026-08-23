@@ -16,6 +16,10 @@ function parseClubAccounts() {
   }
 }
 
+function normalizeGameId(provider, game) {
+  return `${provider}/${game}`.toLowerCase().replace(/\s+/g, '');
+}
+
 class SlotopolService {
   static async getToken() {
     if (token && tokenExpiry > Date.now() + 30_000) return token;
@@ -65,17 +69,9 @@ class SlotopolService {
   }
 
   /*
-   * IMPORTANT FINANCIAL BOUNDARY
-   * ----------------------------
-   * N999Bet customer wallets are NOT mirrored into Slotopol.
-   * Slotopol receives a separate club/provider account (cid + uid).
-   *
-   * Configure:
-   * SLOTOPOL_CLUB_ACCOUNTS={"1":{"cid":1,"uid":123},"2":{"cid":2,"uid":456}}
-   * SLOTOPOL_DEFAULT_CID=1
-   * SLOTOPOL_DEFAULT_UID=123
-   *
-   * These are provider-side service accounts, never customer UIDs.
+   * N999Bet customer wallets are authoritative in N999Bet.
+   * These credentials identify the separate Slotopol provider account
+   * assigned to a club and are never customer wallet credentials.
    */
   static getClubProviderAccount(clubId = 1) {
     const accounts = parseClubAccounts();
@@ -89,8 +85,42 @@ class SlotopolService {
     return { cid, uid };
   }
 
+  static async getClubGames(clubId) {
+    const cid = Number(clubId);
+    if (!Number.isInteger(cid) || cid <= 0) throw new Error('Invalid Slotopol club ID');
+    const response = await this.request('GET', `/club/games?cid=${encodeURIComponent(cid)}&inc=all`);
+    return Array.isArray(response) ? response : (response?.list || response?.games || []);
+  }
+
+  static async assertGameEnabledForClub(clubId, provider, game) {
+    const requested = normalizeGameId(provider, game);
+    const games = await this.getClubGames(clubId);
+    const enabled = games.some((item) => {
+      const id = String(item.game_id || item.id || '').toLowerCase().replace(/\s+/g, '');
+      return id === requested;
+    });
+
+    if (!enabled) {
+      const err = new Error(`Game ${provider}/${game} is not enabled for Slotopol club ${clubId}`);
+      err.status = 403;
+      err.code = 'SLOTOPOL_GAME_DISABLED_FOR_CLUB';
+      throw err;
+    }
+  }
+
+  static async getClubProfile(clubId) {
+    const response = await this.request('GET', `/admin/club/profile?cid=${encodeURIComponent(Number(clubId))}`);
+    return response?.data || response;
+  }
+
   static async startGame(clubId, provider, game) {
     const { cid, uid } = this.getClubProviderAccount(clubId);
+
+    // Preflight the same club/game permission that Slotopol enforces in
+    // /game/new. This prevents N999Bet from presenting a playable game
+    // when Slotopol Admin has disabled it for this club.
+    await this.assertGameEnabledForClub(clubId, provider, game);
+
     const alias = `${provider}/${game}`;
     return this.request('POST', '/game/new', { cid, uid, alias });
   }
