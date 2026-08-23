@@ -6,9 +6,7 @@ const LanguageContext = createContext();
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
+  if (!context) throw new Error('useLanguage must be used within a LanguageProvider');
   return context;
 };
 
@@ -24,15 +22,14 @@ export const LanguageProvider = ({ children }) => {
   }, [language]);
 
   const changeLanguage = (lang) => {
-    if (Object.values(LANGUAGES).includes(lang)) {
-      setLanguage(lang);
-    }
+    if (Object.values(LANGUAGES).includes(lang)) setLanguage(lang);
   };
 
   const t = (key) => {
     const raw = getTranslation(key, language);
-    const currency = getCurrentCountry()?.currency || 'THB';
-    const symbol = getCurrentCountry()?.currencySymbol || '฿';
+    const country = getCurrentCountry();
+    const currency = country?.currency || 'MMK';
+    const symbol = country?.currencySymbol || 'K';
     return String(raw).replaceAll('{{currency}}', currency).replaceAll('{{currencySymbol}}', symbol);
   };
 
@@ -45,11 +42,7 @@ export const LanguageProvider = ({ children }) => {
     isMyanmar: language === LANGUAGES.MM,
   };
 
-  return (
-    <LanguageContext.Provider value={value}>
-      {children}
-    </LanguageContext.Provider>
-  );
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
 
 export default LanguageContext;
