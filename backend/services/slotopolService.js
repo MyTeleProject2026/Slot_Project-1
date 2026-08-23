@@ -1,117 +1,20 @@
-const axios = require('axios');
-const dotenv = require('dotenv');
-dotenv.config();
-
-const SLOTOPOL_URL = (process.env.SLOTOPOL_URL || 'http://localhost:8080').replace(/\/+$/, '');
-let token = null;
-let tokenExpiry = 0;
-
-function parseClubAccounts() {
-  try {
-    const parsed = JSON.parse(process.env.SLOTOPOL_CLUB_ACCOUNTS || '{}');
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch { throw new Error('SLOTOPOL_CLUB_ACCOUNTS must be valid JSON'); }
+const axios=require('axios');require('dotenv').config();
+const SLOTOPOL_URL=(process.env.SLOTOPOL_URL||'http://localhost:8080').replace(/\/+$/,'');let token=null,tokenExpiry=0;
+const unwrap=r=>Array.isArray(r)?r:(r?.list||r?.games||r?.clubs||r?.data?.list||r?.data?.games||r?.data||[]);
+const normalizeGameId=v=>String(v||'').toLowerCase().replace(/[^a-z0-9_\/]/g,'');
+function accounts(){try{const v=JSON.parse(process.env.SLOTOPOL_CLUB_ACCOUNTS||'{}');return v&&typeof v==='object'?v:{}}catch{throw new Error('SLOTOPOL_CLUB_ACCOUNTS must be valid JSON')}}
+class SlotopolService{
+ static async getToken(){if(token&&tokenExpiry>Date.now()+30000)return token;const body={email:process.env.SLOTOPOL_ADMIN_EMAIL,secret:process.env.SLOTOPOL_ADMIN_PASSWORD};try{let r=await axios.post(`${SLOTOPOL_URL}/signin`,body,{timeout:30000});token=r.data?.access||r.data?.token||r.data?.data?.access;if(!token)throw new Error('No token returned by Slotopol signin');tokenExpiry=Date.now()+55*60*1000;return token}catch(e){token=null;tokenExpiry=0;throw new Error(e.response?.data?.what||'Slotopol authentication failed')}}
+ static async request(method,endpoint,data){try{const access=await this.getToken();const r=await axios({method,url:`${SLOTOPOL_URL}${endpoint}`,headers:{Authorization:`Bearer ${access}`,'Content-Type':'application/json',Accept:'application/json'},data,timeout:30000});return r.data}catch(e){const err=new Error(e.response?.data?.what||e.response?.data?.error||e.message||'Slotopol service error');err.status=e.response?.status||502;throw err}}
+ static account(clubId=1){const a=accounts(),x=a[String(clubId)]||a[clubId]||{};const cid=Number(x.cid??process.env.SLOTOPOL_DEFAULT_CID);const uid=Number(x.uid??process.env.SLOTOPOL_DEFAULT_UID);if(!Number.isInteger(cid)||cid<=0)throw new Error(`No Slotopol CID configured for club ${clubId}`);return{cid,uid}}
+ static async getClubGames(cid){const r=await this.request('GET',`/club/games?cid=${encodeURIComponent(cid)}&inc=all`);return unwrap(r)}
+ static async getCatalog(){return unwrap(await this.request('GET','/game/algs'))}
+ static async getGameList(clubId=process.env.N999BET_DEFAULT_CLUB_ID||1){const{cid}=this.account(clubId);const [catalog,enabled]=await Promise.all([this.getCatalog(),this.getClubGames(cid)]);const allowed=new Set(enabled.filter(x=>x.enabled!==false&&x.active!==false&&x.status!=='disabled').map(x=>normalizeGameId(x.game_id||x.id||(x.prov&&x.name?`${x.prov}/${x.name}`:''))).filter(Boolean));if(!allowed.size)return [];return catalog.filter(g=>Array.isArray(g.aliases)&&g.aliases.some(a=>allowed.has(normalizeGameId(`${a.prov}/${a.name}`))))}
+ static async assertGameEnabledForClub(cid,provider,game){const id=normalizeGameId(`${provider}/${game}`);const list=await this.getClubGames(cid);if(!list.some(x=>x.enabled!==false&&x.active!==false&&normalizeGameId(x.game_id||x.id||(x.prov&&x.name?`${x.prov}/${x.name}`:''))===id)){const e=new Error(`Game ${provider}/${game} is not enabled for Slotopol club ${cid}`);e.status=403;e.code='SLOTOPOL_GAME_DISABLED_FOR_CLUB';throw e}}
+ static async startGame(clubId,provider,game){const{cid,uid}=this.account(clubId);if(!Number.isInteger(uid)||uid<=0)throw new Error(`No Slotopol UID configured for club ${clubId}`);await this.assertGameEnabledForClub(cid,provider,game);return this.request('POST','/game/new',{cid,uid,alias:`${provider}/${game}`})}
+ static async spin(gid,bet,lines){const d={gid:Number(gid)};if(bet!=null)d.bet=Number(bet);if(lines!=null)d.sel=Number(lines);return this.request('POST','/slot/spin',d)}
+ static async collect(gid){return this.request('POST','/slot/collect',{gid:Number(gid)})}
+ static async getGameInfo(gid){return this.request('POST','/game/info',{gid:Number(gid)})}
+ static async getGameImages(){return{images:[]}}
 }
-
-// Match Slotopol util.ToID semantics: lower-case ASCII identifiers, keep
-// slash/underscore, and remove punctuation/whitespace. This prevents a
-// permission record such as provider/game-name from being missed because
-// the two applications normalized it differently.
-function normalizeGameId(value = '') {
-  return String(value).toLowerCase().replace(/[^a-z0-9_\/]/g, '');
-}
-
-class SlotopolService {
-  static async getToken() {
-    if (token && tokenExpiry > Date.now() + 30000) return token;
-    try {
-      const response = await axios.post(`${SLOTOPOL_URL}/signin`, { email: process.env.SLOTOPOL_ADMIN_EMAIL, secret: process.env.SLOTOPOL_ADMIN_PASSWORD }, { timeout: 30000 });
-      token = response.data.access || response.data.token || response.data?.data?.access;
-      if (!token) throw new Error('No token in Slotopol signin response');
-      tokenExpiry = Date.now() + 55 * 60 * 1000;
-      return token;
-    } catch (error) {
-      console.error('Slotopol token error:', error.response?.data || error.message);
-      throw new Error('Slotopol authentication failed');
-    }
-  }
-
-  static async request(method, endpoint, data = null) {
-    try {
-      const access = await this.getToken();
-      const config = { method, url: `${SLOTOPOL_URL}${endpoint}`, headers: { Authorization: `Bearer ${access}`, 'Content-Type': 'application/json', Accept: 'application/json' }, timeout: 30000 };
-      if (data !== null) config.data = data;
-      return (await axios(config)).data;
-    } catch (error) {
-      const err = new Error(error.response?.data?.what || error.response?.data?.error || error.response?.data?.message || 'Slotopol service error');
-      err.status = error.response?.status || 502;
-      err.provider = error.response?.data;
-      throw err;
-    }
-  }
-
-  static getClubProviderAccount(clubId = 1) {
-    const accounts = parseClubAccounts();
-    const selected = accounts[String(clubId)] || accounts[clubId];
-    const cid = Number(selected?.cid ?? process.env.SLOTOPOL_DEFAULT_CID);
-    const uid = Number(selected?.uid ?? process.env.SLOTOPOL_DEFAULT_UID);
-    if (!Number.isInteger(cid) || cid <= 0 || !Number.isInteger(uid) || uid <= 0) throw new Error(`No Slotopol provider account configured for club ${clubId}`);
-    return { cid, uid };
-  }
-
-  static async getClubGames(slotopolClubId) {
-    const cid = Number(slotopolClubId);
-    if (!Number.isInteger(cid) || cid <= 0) throw new Error('Invalid Slotopol club ID');
-    const response = await this.request('GET', `/club/games?cid=${encodeURIComponent(cid)}&inc=all`);
-    return Array.isArray(response) ? response : (response?.list || response?.games || response?.data || []);
-  }
-
-  static async assertGameEnabledForClub(slotopolClubId, provider, game) {
-    const requested = normalizeGameId(`${provider}/${game}`);
-    const games = await this.getClubGames(slotopolClubId);
-    const enabled = games.some(item => normalizeGameId(item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : '')) === requested);
-    if (!enabled) {
-      const err = new Error(`Game ${provider}/${game} is not enabled for Slotopol club ${slotopolClubId}`);
-      err.status = 403;
-      err.code = 'SLOTOPOL_GAME_DISABLED_FOR_CLUB';
-      throw err;
-    }
-  }
-
-  static async getClubProfile(clubId) {
-    const response = await this.request('GET', `/admin/club/profile?cid=${encodeURIComponent(Number(clubId))}`);
-    return response?.data || response;
-  }
-
-  static async startGame(clubId, provider, game) {
-    const { cid, uid } = this.getClubProviderAccount(clubId);
-    await this.assertGameEnabledForClub(cid, provider, game);
-    return this.request('POST', '/game/new', { cid, uid, alias: `${provider}/${game}` });
-  }
-
-  static async spin(gameId, bet, lines) {
-    const data = { gid: Number(gameId) };
-    if (bet !== undefined && bet !== null) data.bet = Number(bet);
-    if (lines !== undefined && lines !== null) data.sel = Number(lines);
-    return this.request('POST', '/slot/spin', data);
-  }
-
-  static async collect(gameId) { return this.request('POST', '/slot/collect', { gid: Number(gameId) }); }
-  static async getGameInfo(gameId) { return this.request('POST', '/game/info', { gid: Number(gameId) }); }
-
-  static async getGameList(clubId = process.env.N999BET_DEFAULT_CLUB_ID || 1) {
-    const { cid } = this.getClubProviderAccount(clubId);
-    const response = await this.request('GET', '/game/algs');
-    const catalog = Array.isArray(response) ? response : (response?.list || response?.games || response?.data || []);
-    const enabled = await this.getClubGames(cid);
-    const allowed = new Set(enabled.map(item => normalizeGameId(item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : ''))).filter(Boolean));
-    return catalog.filter(game => Array.isArray(game.aliases) && game.aliases.some(alias => allowed.has(normalizeGameId(`${alias.prov}/${alias.name}`))));
-  }
-
-  static async getGameImages(gameId) {
-    try { return await this.request('GET', `/cloudinary/images?folder=games/${encodeURIComponent(gameId)}`); }
-    catch { return { images: [] }; }
-  }
-}
-
-module.exports = SlotopolService;
+module.exports=SlotopolService;
