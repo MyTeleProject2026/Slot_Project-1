@@ -14,9 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-      - run: npm ci
+      - run: npm install
         working-directory: backend
       - run: node --check server.js
         working-directory: backend
@@ -28,9 +26,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-user/package-lock.json
-      - run: npm ci
+      - run: npm install
         working-directory: frontend-user
       - run: npm run build
         working-directory: frontend-user
@@ -42,9 +38,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-admin/package-lock.json
-      - run: npm ci
+      - run: npm install
         working-directory: frontend-admin
       - run: npm run build
         working-directory: frontend-admin
@@ -56,9 +50,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: frontend-super-admin/package-lock.json
-      - run: npm ci
+      - run: npm install
         working-directory: frontend-super-admin
       - run: npm run build
         working-directory: frontend-super-admin
