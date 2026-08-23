@@ -20,19 +20,20 @@ function normalizeGameId(provider, game) {
   return `${provider}/${game}`.toLowerCase().replace(/\s+/g, '');
 }
 
+function normalizeAlias(provider, game) {
+  return normalizeGameId(provider, game);
+}
+
 class SlotopolService {
   static async getToken() {
     if (token && tokenExpiry > Date.now() + 30_000) return token;
-
     try {
       const response = await axios.post(`${SLOTOPOL_URL}/signin`, {
         email: process.env.SLOTOPOL_ADMIN_EMAIL,
         secret: process.env.SLOTOPOL_ADMIN_PASSWORD
       }, { timeout: 30000 });
-
       token = response.data.access || response.data.token || response.data?.data?.access;
       if (!token) throw new Error('No token in Slotopol signin response');
-
       tokenExpiry = Date.now() + (55 * 60 * 1000);
       return token;
     } catch (error) {
@@ -47,20 +48,14 @@ class SlotopolService {
       const config = {
         method,
         url: `${SLOTOPOL_URL}${endpoint}`,
-        headers: {
-          Authorization: `Bearer ${access}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
+        headers: { Authorization: `Bearer ${access}`, 'Content-Type': 'application/json', Accept: 'application/json' },
         timeout: 30000
       };
       if (data !== null) config.data = data;
       return (await axios(config)).data;
     } catch (error) {
       const status = error.response?.status;
-      const providerError = error.response?.data?.what ||
-        error.response?.data?.error ||
-        error.response?.data?.message;
+      const providerError = error.response?.data?.what || error.response?.data?.error || error.response?.data?.message;
       const err = new Error(providerError || 'Slotopol service error');
       err.status = status || 502;
       err.provider = error.response?.data;
@@ -68,17 +63,11 @@ class SlotopolService {
     }
   }
 
-  /*
-   * N999Bet customer wallets are authoritative in N999Bet.
-   * These credentials identify the separate Slotopol provider account
-   * assigned to a club and are never customer wallet credentials.
-   */
   static getClubProviderAccount(clubId = 1) {
     const accounts = parseClubAccounts();
     const selected = accounts[String(clubId)] || accounts[clubId];
     const cid = Number(selected?.cid ?? process.env.SLOTOPOL_DEFAULT_CID);
     const uid = Number(selected?.uid ?? process.env.SLOTOPOL_DEFAULT_UID);
-
     if (!Number.isInteger(cid) || cid <= 0 || !Number.isInteger(uid) || uid <= 0) {
       throw new Error(`No Slotopol provider account configured for club ${clubId}`);
     }
@@ -96,10 +85,9 @@ class SlotopolService {
     const requested = normalizeGameId(provider, game);
     const games = await this.getClubGames(clubId);
     const enabled = games.some((item) => {
-      const id = String(item.game_id || item.id || '').toLowerCase().replace(/\s+/g, '');
-      return id === requested;
+      const raw = item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : '');
+      return String(raw).toLowerCase().replace(/\s+/g, '') === requested;
     });
-
     if (!enabled) {
       const err = new Error(`Game ${provider}/${game} is not enabled for Slotopol club ${clubId}`);
       err.status = 403;
@@ -115,14 +103,8 @@ class SlotopolService {
 
   static async startGame(clubId, provider, game) {
     const { cid, uid } = this.getClubProviderAccount(clubId);
-
-    // Preflight the same club/game permission that Slotopol enforces in
-    // /game/new. This prevents N999Bet from presenting a playable game
-    // when Slotopol Admin has disabled it for this club.
     await this.assertGameEnabledForClub(clubId, provider, game);
-
-    const alias = `${provider}/${game}`;
-    return this.request('POST', '/game/new', { cid, uid, alias });
+    return this.request('POST', '/game/new', { cid, uid, alias: `${provider}/${game}` });
   }
 
   static async spin(gameId, bet, lines) {
@@ -132,24 +114,31 @@ class SlotopolService {
     return this.request('POST', '/slot/spin', data);
   }
 
-  static async collect(gameId) {
-    return this.request('POST', '/slot/collect', { gid: Number(gameId) });
-  }
+  static async collect(gameId) { return this.request('POST', '/slot/collect', { gid: Number(gameId) }); }
+  static async getGameInfo(gameId) { return this.request('POST', '/game/info', { gid: Number(gameId) }); }
 
-  static async getGameInfo(gameId) {
-    return this.request('POST', '/game/info', { gid: Number(gameId) });
-  }
+  // Returns the normal Slotopol game catalog shape, but only for games
+  // explicitly enabled for this N999Bet club. This prevents the player UI
+  // from showing games that Slotopol Admin has disabled for the club.
+  static async getGameList(clubId = process.env.N999BET_DEFAULT_CLUB_ID || 1) {
+    const response = await this.request('GET', '/game/algs');
+    const catalog = Array.isArray(response) ? response : (response?.list || response?.games || response?.data || []);
+    const enabled = await this.getClubGames(clubId);
+    const allowed = new Set(enabled.map((item) => {
+      if (item.game_id || item.id) return String(item.game_id || item.id).toLowerCase().replace(/\s+/g, '');
+      if (item.prov && item.name) return normalizeAlias(item.prov, item.name);
+      return '';
+    }).filter(Boolean));
 
-  static async getGameList() {
-    return this.request('GET', '/game/algs');
+    return catalog.filter((game) => {
+      const aliases = Array.isArray(game.aliases) ? game.aliases : [];
+      return aliases.some((alias) => allowed.has(normalizeAlias(alias.prov, alias.name)));
+    });
   }
 
   static async getGameImages(gameId) {
-    try {
-      return await this.request('GET', `/cloudinary/images?folder=games/${encodeURIComponent(gameId)}`);
-    } catch {
-      return { images: [] };
-    }
+    try { return await this.request('GET', `/cloudinary/images?folder=games/${encodeURIComponent(gameId)}`); }
+    catch { return { images: [] }; }
   }
 }
 
