@@ -13,11 +13,17 @@ function parseClubAccounts() {
   } catch { throw new Error('SLOTOPOL_CLUB_ACCOUNTS must be valid JSON'); }
 }
 
-function normalizeGameId(provider, game) { return `${provider}/${game}`.toLowerCase().replace(/\s+/g, ''); }
+// Match Slotopol util.ToID semantics: lower-case ASCII identifiers, keep
+// slash/underscore, and remove punctuation/whitespace. This prevents a
+// permission record such as provider/game-name from being missed because
+// the two applications normalized it differently.
+function normalizeGameId(value = '') {
+  return String(value).toLowerCase().replace(/[^a-z0-9_\/]/g, '');
+}
 
 class SlotopolService {
   static async getToken() {
-    if (token && tokenExpiry > Date.now() + 30_000) return token;
+    if (token && tokenExpiry > Date.now() + 30000) return token;
     try {
       const response = await axios.post(`${SLOTOPOL_URL}/signin`, { email: process.env.SLOTOPOL_ADMIN_EMAIL, secret: process.env.SLOTOPOL_ADMIN_PASSWORD }, { timeout: 30000 });
       token = response.data.access || response.data.token || response.data?.data?.access;
@@ -44,8 +50,6 @@ class SlotopolService {
     }
   }
 
-  // clubId is the N999Bet local club ID. The returned cid is the
-  // authoritative Slotopol club ID used for permissions and game sessions.
   static getClubProviderAccount(clubId = 1) {
     const accounts = parseClubAccounts();
     const selected = accounts[String(clubId)] || accounts[clubId];
@@ -59,16 +63,13 @@ class SlotopolService {
     const cid = Number(slotopolClubId);
     if (!Number.isInteger(cid) || cid <= 0) throw new Error('Invalid Slotopol club ID');
     const response = await this.request('GET', `/club/games?cid=${encodeURIComponent(cid)}&inc=all`);
-    return Array.isArray(response) ? response : (response?.list || response?.games || []);
+    return Array.isArray(response) ? response : (response?.list || response?.games || response?.data || []);
   }
 
   static async assertGameEnabledForClub(slotopolClubId, provider, game) {
-    const requested = normalizeGameId(provider, game);
+    const requested = normalizeGameId(`${provider}/${game}`);
     const games = await this.getClubGames(slotopolClubId);
-    const enabled = games.some(item => {
-      const raw = item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : '');
-      return String(raw).toLowerCase().replace(/\s+/g, '') === requested;
-    });
+    const enabled = games.some(item => normalizeGameId(item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : '')) === requested);
     if (!enabled) {
       const err = new Error(`Game ${provider}/${game} is not enabled for Slotopol club ${slotopolClubId}`);
       err.status = 403;
@@ -84,8 +85,6 @@ class SlotopolService {
 
   static async startGame(clubId, provider, game) {
     const { cid, uid } = this.getClubProviderAccount(clubId);
-    // IMPORTANT: permission is stored against Slotopol's cid, not the
-    // N999Bet database club_id. This prevents false "game disabled" errors.
     await this.assertGameEnabledForClub(cid, provider, game);
     return this.request('POST', '/game/new', { cid, uid, alias: `${provider}/${game}` });
   }
@@ -105,12 +104,8 @@ class SlotopolService {
     const response = await this.request('GET', '/game/algs');
     const catalog = Array.isArray(response) ? response : (response?.list || response?.games || response?.data || []);
     const enabled = await this.getClubGames(cid);
-    const allowed = new Set(enabled.map(item => {
-      if (item.game_id || item.id) return String(item.game_id || item.id).toLowerCase().replace(/\s+/g, '');
-      if (item.prov && item.name) return normalizeGameId(item.prov, item.name);
-      return '';
-    }).filter(Boolean));
-    return catalog.filter(game => Array.isArray(game.aliases) && game.aliases.some(alias => allowed.has(normalizeGameId(alias.prov, alias.name))));
+    const allowed = new Set(enabled.map(item => normalizeGameId(item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : ''))).filter(Boolean));
+    return catalog.filter(game => Array.isArray(game.aliases) && game.aliases.some(alias => allowed.has(normalizeGameId(`${alias.prov}/${alias.name}`))));
   }
 
   static async getGameImages(gameId) {

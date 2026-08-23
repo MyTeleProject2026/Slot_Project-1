@@ -3,7 +3,6 @@ import { DEFAULT_LANGUAGE, LANGUAGES, translations, getTranslation } from '../ut
 import { getCurrentCountry } from '../utils/constants';
 
 const LanguageContext = createContext();
-
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) throw new Error('useLanguage must be used within a LanguageProvider');
@@ -18,7 +17,8 @@ export const LanguageProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('language', language);
-    document.documentElement.lang = language;
+    document.documentElement.lang = language === LANGUAGES.MM ? 'my' : 'en';
+    document.documentElement.dataset.language = language;
   }, [language]);
 
   const changeLanguage = (lang) => {
@@ -30,7 +30,14 @@ export const LanguageProvider = ({ children }) => {
     const country = getCurrentCountry();
     const currency = country?.currency || 'MMK';
     const symbol = country?.currencySymbol || 'K';
-    return String(raw).replaceAll('{{currency}}', currency).replaceAll('{{currencySymbol}}', symbol);
+    // Legacy translation keys contained THB. Currency is now always supplied
+    // by the active club/country configuration, so the old literal can never
+    // leak into the Myanmar deployment.
+    return String(raw)
+      .replaceAll('THB', currency)
+      .replaceAll('฿', symbol)
+      .replaceAll('{{currency}}', currency)
+      .replaceAll('{{currencySymbol}}', symbol);
   };
 
   const value = {
