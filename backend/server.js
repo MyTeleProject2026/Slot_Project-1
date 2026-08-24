@@ -16,6 +16,7 @@ const pool = require('./config/database');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const gameRoutes = require('./routes/games');
+const gameCapabilitiesRoutes = require('./routes/gameCapabilities');
 const walletRoutes = require('./routes/wallet');
 const adminRoutes = require('./routes/admin');
 const superAdminRoutes = require('./routes/superAdmin');
@@ -77,6 +78,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/games', gameRoutes);
+// Slotopol runtime metadata. This is intentionally separate from the player
+// catalogue so the game client can render each game's actual server shape
+// without inventing reel/row/provider data.
+app.use('/api/games/capabilities', gameCapabilitiesRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/super-admin', superAdminRoutes);
@@ -169,7 +174,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
 });
 
 // ============================================================
-// ✅ Initialize GameMetadata table (wrapped in async IIFE)
+// Initialize GameMetadata table (wrapped in async IIFE)
 // ============================================================
 (async () => {
   try {
