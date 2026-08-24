@@ -35,6 +35,19 @@ export const gameService = {
     return response.data;
   },
 
+  // Slotopol is authoritative for each game's actual dimensions and runtime
+  // shape. The player renderer can use this instead of assuming a fixed
+  // 5x3/20-line slot layout.
+  getGameCapabilities: async (id) => {
+    if (!id) throw new Error('Game ID is required');
+    const cacheKey = getCacheKey('/games/capabilities', { id });
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    const response = await api.get(`/games/capabilities/${encodeURIComponent(id)}`);
+    setCacheData(cacheKey, response.data);
+    return response.data;
+  },
+
   getProviders: async () => {
     const response = await api.get('/games/providers');
     return response.data;
