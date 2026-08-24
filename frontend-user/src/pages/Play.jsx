@@ -1,46 +1,52 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { FaArrowLeft, FaCoins, FaDice, FaExpand, FaMinus, FaPlus, FaVolumeMute, FaVolumeUp, FaBolt, FaInfoCircle } from 'react-icons/fa';
+import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGames } from '../hooks/useGames';
 import { useWallet } from '../hooks/useWallet';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { FaArrowLeft, FaCoins, FaDice, FaMinus, FaPlus, FaExpand, FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
-import toast from 'react-hot-toast';
-
-const rtpDisplay = (game) => {
-  if (game?.rtpOverride != null && Number.isFinite(Number(game.rtpOverride))) return Number(game.rtpOverride).toFixed(2);
-  if (Array.isArray(game?.rtp) && game.rtp.length) return Number(game.rtp[game.rtp.length - 1]).toFixed(2);
-  if (typeof game?.rtp === 'number') return Number(game.rtp).toFixed(2);
-  return 'N/A';
-};
+import SlotReelBoard from '../components/games/SlotReelBoard';
+import slotAudio from '../services/slotAudio';
 
 const unwrap = (response) => response?.data || response || {};
 const errorMessage = (error, fallback) => error?.response?.data?.error || error?.response?.data?.message || error?.message || fallback;
+const gameState = (data) => data?.session?.game || data?.session?.provider?.game || data?.game || data?.result?.game || data?.result || null;
 
-const getGameState = (data) => data?.session?.game || data?.session?.provider?.game || data?.game || data?.result?.game || data?.result || null;
+function readGrid(state) {
+  return state?.grid || state?.Grid || state?.screen || state?.Screen || [];
+}
 
-const getGrid = (state) => {
-  const grid = state?.grid || state?.Grid;
+function toRows(grid, reels, rows) {
   if (!Array.isArray(grid) || !grid.length) return [];
-  return grid.map((reel) => Array.isArray(reel) ? reel : [reel]);
-};
+  const expectedReels = Number(reels || 0);
+  const expectedRows = Number(rows || 0);
+  if (expectedReels > 0 && grid.length === expectedReels && Array.isArray(grid[0])) {
+    const inner = Math.max(...grid.map((r) => Array.isArray(r) ? r.length : 1));
+    if (!expectedRows || inner === expectedRows) {
+      return Array.from({ length: inner }, (_, r) => grid.map((reel) => Array.isArray(reel) ? reel[r] : reel));
+    }
+  }
+  if (Array.isArray(grid[0])) return grid;
+  return [grid];
+}
 
-// Slotopol returns symbol IDs/numbers. These are presentation-only labels;
-// the authoritative symbol positions and results always come from Slotopol.
-const SYMBOLS = ['🍒', '🍋', '🍊', '🍉', '⭐', '🔔', '7️⃣', '💎', '🍀', '🃏', '👑', '🎁'];
-const symbolText = (value) => {
-  if (value === null || value === undefined) return '•';
-  if (typeof value === 'object') value = value.symbol ?? value.sym ?? value.id ?? value.value;
+function numeric(value, fallback = 0) {
   const n = Number(value);
-  if (Number.isInteger(n) && n >= 0) return SYMBOLS[n % SYMBOLS.length];
-  return String(value);
-};
+  return Number.isFinite(n) ? n : fallback;
+}
 
-const placeholder = (name) => {
-  const safe = String(name || 'Slotopol').replace(/[<>&'\"]/g, '').slice(0, 28);
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b1020"/><stop offset="1" stop-color="#312e81"/></linearGradient></defs><rect width="600" height="800" fill="url(#g)"/><circle cx="300" cy="300" r="170" fill="#111827" stroke="#f59e0b" stroke-width="8"/><text x="300" y="320" fill="#fbbf24" font-family="Arial" font-size="100" text-anchor="middle">🎰</text><text x="300" y="535" fill="white" font-family="Arial" font-size="34" font-weight="700" text-anchor="middle">${safe}</text><text x="300" y="590" fill="#9ca3af" font-family="Arial" font-size="24" text-anchor="middle">SLOTOPOL</text></svg>`)}`;
-};
+function gameLimits(game) {
+  const raw = game?.raw || game || {};
+  const min = numeric(game?.minBet ?? raw.minBet, 0.1);
+  const max = numeric(game?.maxBet ?? raw.maxBet, 100);
+  const lines = numeric(game?.lines ?? raw.ln ?? raw.lnum, 20);
+  return { min: Math.max(0.01, min), max: Math.max(min, max), lines: Math.max(1, lines) };
+}
+
+const providerInitials = (provider) => String(provider || 'SLOTOPOL').split(/\s+/).map((p) => p[0]).join('').slice(0, 4).toUpperCase();
 
 const Play = () => {
   const { gameId } = useParams();
@@ -49,13 +55,19 @@ const Play = () => {
   const { t } = useLanguage();
   const { games, loading, startGame, spin, collectWin } = useGames();
   const { balance, refreshBalance } = useWallet();
+
   const [game, setGame] = useState(null);
   const [session, setSession] = useState(null);
-  const [bet, setBet] = useState(1);
   const [spinResult, setSpinResult] = useState(null);
+  const [bet, setBet] = useState(1);
+  const [lines, setLines] = useState(20);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
   const [sound, setSound] = useState(true);
+  const [quickSpin, setQuickSpin] = useState(false);
+  const [autoSpins, setAutoSpins] = useState(0);
+  const [showInfo, setShowInfo] = useState(false);
+  const [error, setError] = useState(null);
+  const autoRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -65,26 +77,54 @@ const Play = () => {
     }
     const id = decodeURIComponent(gameId || '');
     const found = games?.find((item) => String(item.id) === id);
-    if (found) setGame(found);
-    else if (!loading && games?.length) setError(t('game.unavailable'));
+    if (found) {
+      setGame(found);
+      const limits = gameLimits(found);
+      setBet((current) => Math.min(limits.max, Math.max(limits.min, current)));
+      setLines(Math.min(limits.lines, 20));
+    } else if (!loading && games?.length) {
+      setError(t('game.unavailable'));
+    }
   }, [games, gameId, loading, navigate, isAuthenticated, t]);
 
+  const limits = useMemo(() => gameLimits(game), [game]);
+  const activeState = spinResult ? gameState(spinResult) : session?.gameState;
+  const rawGrid = readGrid(activeState);
+  const grid = useMemo(() => toRows(rawGrid, game?.reels || game?.raw?.sx, game?.rows || game?.raw?.sy), [rawGrid, game]);
+  const wins = activeState?.wins || spinResult?.wins || spinResult?.result?.wins || [];
+  const gain = numeric(spinResult?.gain ?? spinResult?.game?.gain ?? spinResult?.result?.gain, 0);
+  const freeSpins = numeric(spinResult?.fs ?? spinResult?.game?.fs ?? activeState?.fs, 0);
+  const wallet = numeric(balance?.main, 0);
+  const reelCount = numeric(game?.reels ?? game?.raw?.sx, grid?.[0]?.length || 0);
+  const rowCount = numeric(game?.rows ?? game?.raw?.sy, grid?.length || 0);
+
   useEffect(() => {
-    if (game && !session && !busy && !error) startSlotopolGame();
+    if (!game || session || busy || error) return;
+    startSlotopolGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game]);
 
-  const startSlotopolGame = async () => {
+  useEffect(() => {
+    if (!spinResult || !sound) return;
+    slotAudio.unlock();
+    if (freeSpins > 0) slotAudio.freeSpins();
+    else if (gain > 0) slotAudio.win(gain / Math.max(bet, 0.01));
+  }, [spinResult, sound, freeSpins, gain, bet]);
+
+  useEffect(() => () => { autoRef.current = false; }, []);
+
+  async function startSlotopolGame() {
     if (!game || busy) return;
     setBusy(true);
     setError(null);
     try {
-      const response = await startGame(game.id, bet, Math.min(20, Number(game?.raw?.lnum || 20)));
+      slotAudio.unlock();
+      const response = await startGame(game.id, bet, lines);
       const data = unwrap(response);
       const localId = data.sessionId || data.session?.id;
-      const gid = data.session?.gid || data.gid;
-      if (data.success === false || !localId || !gid) throw new Error(data.error || 'Slotopol game session could not be created');
-      setSession({ localSessionId: localId, gid: Number(gid), gameState: getGameState(data) });
+      const gid = data.session?.gid ?? data.gid;
+      if (data.success === false || !localId || gid == null) throw new Error(data.error || 'Slotopol game session could not be created');
+      setSession({ localSessionId: localId, gid: numeric(gid), gameState: gameState(data) });
       await refreshBalance();
     } catch (e) {
       const message = errorMessage(e, 'Unable to start Slotopol game');
@@ -93,33 +133,38 @@ const Play = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }
 
-  const playSpin = async () => {
-    if (!session || busy) return;
+  async function playSpin({ fromAuto = false } = {}) {
+    if (!session || busy || (wallet > 0 && wallet < bet * Math.max(lines, 1) && freeSpins <= 0)) return false;
     setBusy(true);
     setError(null);
     try {
-      const response = await spin(session.localSessionId, bet, Math.min(20, Number(game?.raw?.lnum || 20)));
+      slotAudio.unlock();
+      if (sound) slotAudio.spinStart();
+      const response = await spin(session.localSessionId, bet, lines);
       const data = unwrap(response);
       if (data.success === false) throw new Error(data.error || 'Slotopol spin failed');
       const result = data.result || data;
-      const state = getGameState(result);
       setSpinResult(result);
-      setSession((old) => ({ ...old, gameState: state || old.gameState }));
+      setSession((old) => ({ ...old, gameState: gameState(result) || old.gameState }));
       await refreshBalance();
-      const gain = Number(result?.gain ?? result?.game?.gain ?? 0);
-      if (gain > 0) toast.success(`+${gain.toFixed(2)}`);
+      const resultGain = numeric(result?.gain ?? result?.game?.gain ?? result?.result?.gain, 0);
+      const resultFs = numeric(result?.fs ?? result?.game?.fs ?? gameState(result)?.fs, 0);
+      if (!fromAuto && resultGain > 0) toast.success(`WIN +${resultGain.toFixed(2)}`);
+      if (resultFs > 0 && !fromAuto) toast.success(`${resultFs} free spins remaining`);
+      return true;
     } catch (e) {
       const message = errorMessage(e, 'Slotopol spin failed');
       setError(message);
       toast.error(message);
+      return false;
     } finally {
       setBusy(false);
     }
-  };
+  }
 
-  const collect = async () => {
+  async function collect() {
     if (!session || busy) return;
     setBusy(true);
     try {
@@ -128,83 +173,115 @@ const Play = () => {
       if (data.success === false) throw new Error(data.error || 'Collect failed');
       await refreshBalance();
       setSpinResult(null);
-      toast.success(t('common.confirm'));
+      toast.success('Win collected');
     } catch (e) {
       toast.error(errorMessage(e, 'Collect failed'));
     } finally {
       setBusy(false);
     }
-  };
+  }
 
-  const toggleFullscreen = async () => {
+  async function runAutoplay(count) {
+    if (!session || busy || autoRef.current) return;
+    autoRef.current = true;
+    setAutoSpins(count);
+    for (let i = 0; i < count && autoRef.current; i += 1) {
+      setAutoSpins(count - i);
+      const ok = await playSpin({ fromAuto: true });
+      if (!ok) break;
+      await new Promise((resolve) => setTimeout(resolve, quickSpin ? 450 : 1300));
+    }
+    autoRef.current = false;
+    setAutoSpins(0);
+  }
+
+  const stopAutoplay = () => { autoRef.current = false; setAutoSpins(0); };
+  const adjustBet = (delta) => setBet((value) => Math.min(limits.max, Math.max(limits.min, Number((value + delta).toFixed(2)))));
+  const adjustLines = (delta) => setLines((value) => Math.min(limits.lines, Math.max(1, value + delta)));
+
+  const fullscreen = async () => {
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
       else await document.exitFullscreen();
     } catch {}
   };
 
-  const activeState = spinResult ? getGameState(spinResult) : session?.gameState;
-  const grid = useMemo(() => getGrid(activeState), [activeState]);
-  const gain = Number(spinResult?.gain ?? spinResult?.game?.gain ?? 0);
-  const wallet = Number(balance?.main || 0);
-  const minBet = Number(game?.minBet || 0.1);
-  const maxBet = Number(game?.maxBet || 100);
-  const step = minBet < 1 ? 0.1 : 1;
-  const image = game?.image || game?.image_url || placeholder(game?.name);
-
-  const adjustBet = (delta) => setBet((value) => Math.min(maxBet, Math.max(minBet, Number((value + delta).toFixed(2)))));
+  const image = game?.image || game?.image_url || '';
+  const provider = game?.provider || game?.raw?.prov || 'Slotopol';
+  const rtp = Array.isArray(game?.rtp) && game.rtp.length ? Number(game.rtp[game.rtp.length - 1]).toFixed(2) : 'N/A';
+  const info = game?.raw || game || {};
+  const canCollect = gain > 0;
 
   if (loading || (!game && !error)) return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><LoadingSpinner /></div>;
   if (error) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-center text-gray-300 px-6"><div><p className="text-xl">{error}</p><button onClick={() => navigate('/games')} className="mt-5 px-6 py-3 bg-primary-500 text-dark-900 rounded-xl font-bold">{t('common.back')}</button></div></div>;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 text-white overflow-y-auto">
-      <header className="sticky top-0 z-20 h-14 sm:h-16 px-3 sm:px-6 bg-slate-950/95 backdrop-blur border-b border-white/10 flex items-center justify-between">
-        <button onClick={() => navigate('/games')} className="flex items-center gap-2 text-gray-300 hover:text-white"><FaArrowLeft /><span className="hidden sm:inline">{t('common.back')}</span></button>
-        <div className="flex items-center gap-2 min-w-0"><img src={image} alt="" className="w-8 h-8 rounded object-cover"/><div className="min-w-0"><div className="font-bold truncate max-w-[190px] sm:max-w-none">{game.name}</div><div className="text-[10px] text-gray-500">{game.provider || 'Slotopol'} · {game.id}</div></div></div>
-        <div className="flex items-center gap-2 sm:gap-4"><button aria-label="Sound" onClick={() => setSound((v) => !v)} className="text-gray-300">{sound ? <FaVolumeUp /> : <FaVolumeMute />}</button><button aria-label="Fullscreen" onClick={toggleFullscreen} className="text-gray-300"><FaExpand /></button><div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5"><FaCoins className="text-yellow-400"/><span>{wallet.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div></div>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#05070d] text-white">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#05070d]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 sm:h-16 max-w-[1500px] items-center justify-between gap-2 px-3 sm:px-5">
+          <button onClick={() => navigate('/games')} className="flex items-center gap-2 text-slate-300 hover:text-white"><FaArrowLeft /><span className="hidden sm:inline">Games</span></button>
+          <div className="min-w-0 flex items-center gap-2 sm:gap-3">
+            {image ? <img src={image} alt="" className="h-8 w-8 rounded-lg object-cover border border-white/10" /> : <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-300 to-fuchsia-600 flex items-center justify-center text-[10px] font-black">{providerInitials(provider)}</div>}
+            <div className="min-w-0"><div className="truncate text-sm sm:text-base font-black">{game.name}</div><div className="truncate text-[9px] uppercase tracking-[.16em] text-slate-500">{provider} · {game.id}</div></div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button onClick={() => { setSound((v) => !v); slotAudio.unlock(); }} aria-label="Sound" className="text-slate-300 hover:text-white">{sound ? <FaVolumeUp /> : <FaVolumeMute />}</button>
+            <button onClick={() => setShowInfo(true)} aria-label="Game info" className="text-slate-300 hover:text-white"><FaInfoCircle /></button>
+            <button onClick={fullscreen} aria-label="Fullscreen" className="text-slate-300 hover:text-white"><FaExpand /></button>
+            <div className="hidden sm:flex items-center gap-2 rounded-xl border border-white/10 bg-white/[.04] px-3 py-2"><FaCoins className="text-amber-400"/><span className="font-bold">{wallet.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+          </div>
+        </div>
       </header>
 
-      <main className="min-h-[calc(100vh-56px)] flex flex-col items-center justify-center p-2 sm:p-4 md:p-6">
-        <section className="w-full max-w-7xl rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-b from-slate-900 to-slate-950 shadow-2xl">
-          <div className="relative p-2 sm:p-4 md:p-8 min-h-[58vh] sm:min-h-[62vh] flex items-center justify-center">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-400 via-primary-500 to-amber-400" />
-            {grid.length ? (
-              <div className="w-full max-w-5xl">
-                <div className="relative rounded-xl sm:rounded-2xl p-2 sm:p-4 bg-black/50 border border-white/10 shadow-inner">
-                  <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/5 via-transparent to-black/20 rounded-xl" />
-                  <div className="grid gap-1 sm:gap-2 md:gap-3" style={{gridTemplateColumns:`repeat(${grid.length},minmax(0,1fr))`}}>
-                    {Array.from({length:Math.max(...grid.map((r)=>r.length))}).flatMap((_, row) => grid.map((reel,col) => {
-                      const value = reel[row];
-                      return <div key={`${col}-${row}`} className={`aspect-[4/5] min-h-[58px] sm:min-h-[90px] md:min-h-[120px] rounded-md sm:rounded-lg bg-gradient-to-b from-slate-700 via-slate-800 to-slate-950 border border-white/10 flex items-center justify-center shadow-lg ${busy ? 'animate-pulse' : ''}`}><span className="text-[clamp(24px,6vw,56px)] select-none">{symbolText(value)}</span></div>;
-                    }))}
-                  </div>
-                </div>
-                <div className="flex justify-between mt-2 px-1 text-[10px] sm:text-xs text-gray-500"><span>{game.provider} · {game.name}</span><span>{grid.length} reels</span></div>
-              </div>
-            ) : (
-              <div className="text-center text-gray-400"><img src={image} alt="" className="w-28 h-36 sm:w-36 sm:h-44 object-cover rounded-xl mx-auto mb-4 opacity-80"/><p>{busy ? 'Connecting to Slotopol…' : 'Ready to play'}</p></div>
-            )}
+      <main className="mx-auto flex min-h-[calc(100vh-56px)] max-w-[1500px] flex-col px-2 py-3 sm:px-4 sm:py-5 lg:px-8">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[.16em] text-slate-500">
+          <span>{provider} · {game.name}</span><span>{reelCount || '—'} reels · {rowCount || '—'} rows · RTP {rtp}%</span>
+        </div>
+
+        <section className="relative flex-1 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-slate-900 via-[#0b0f1c] to-[#05070d] p-2 sm:p-5 lg:p-8 shadow-2xl">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(245,158,11,.08),transparent_42%)]" />
+          <div className="relative flex min-h-[54vh] items-center justify-center">
+            <SlotReelBoard grid={grid} wins={wins} spinning={busy} sound={sound} reels={reelCount} rows={rowCount} />
           </div>
 
-          {spinResult && <div className="mx-3 sm:mx-6 mb-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-center"><div className="text-xs text-gray-500">Last spin</div><div className={`text-xl sm:text-2xl font-black ${gain > 0 ? 'text-emerald-400' : 'text-gray-300'}`}>{gain > 0 ? `WIN +${gain.toFixed(2)}` : 'NO WIN'}</div>{Number(spinResult?.fs ?? spinResult?.game?.fs ?? 0) > 0 && <div className="text-amber-400 text-xs mt-1">Free spins remaining: {Number(spinResult.fs ?? spinResult.game?.fs)}</div>}</div>}
+          <AnimatePresence>
+            {busy && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 pointer-events-none flex items-center justify-center"><div className="rounded-full border border-amber-300/20 bg-black/40 px-5 py-2 text-[10px] font-black uppercase tracking-[.28em] text-amber-200 backdrop-blur">{autoSpins ? `AUTO ${autoSpins}` : 'SPINNING'}</div></motion.div>}
+            {gain > 0 && !busy && <motion.div initial={{ opacity: 0, y: 25, scale: .85 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="absolute left-1/2 top-5 -translate-x-1/2 rounded-2xl border border-emerald-300/30 bg-emerald-950/75 px-6 py-3 text-center shadow-2xl backdrop-blur"><div className="text-[9px] uppercase tracking-[.25em] text-emerald-300">WIN</div><div className="text-2xl font-black text-emerald-100">+{gain.toFixed(2)}</div></motion.div>}
+            {freeSpins > 0 && !busy && <motion.div initial={{ opacity: 0, scale: .8 }} animate={{ opacity: 1, scale: 1 }} className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full border border-amber-300/30 bg-amber-950/80 px-5 py-2 text-xs font-black text-amber-100 shadow-xl">FREE SPINS · {freeSpins}</motion.div>}
+          </AnimatePresence>
+        </section>
 
-          {error && <div className="mx-3 sm:mx-6 mb-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">⚠️ {error}</div>}
+        {error && <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
 
-          <div className="p-3 sm:p-5 md:p-6 border-t border-white/10 bg-black/20">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center justify-between w-full md:w-auto gap-3">
-                <div className="text-center"><div className="text-[10px] text-gray-500">BALANCE</div><div className="font-bold text-sm sm:text-base">{wallet.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
-                <div className="h-8 w-px bg-white/10" />
-                <div className="flex items-center gap-1 rounded-xl bg-slate-900 border border-white/10 p-1"><button disabled={busy||bet<=minBet} onClick={()=>adjustBet(-step)} className="w-9 h-9 rounded-lg bg-white/5 disabled:opacity-30"><FaMinus className="mx-auto text-xs"/></button><div className="w-16 text-center"><div className="text-[9px] text-gray-500">BET</div><div className="font-black">{bet.toFixed(minBet<1?1:0)}</div></div><button disabled={busy||bet>=maxBet} onClick={()=>adjustBet(step)} className="w-9 h-9 rounded-lg bg-white/5 disabled:opacity-30"><FaPlus className="mx-auto text-xs"/></button></div>
-              </div>
-              <button onClick={session ? playSpin : startSlotopolGame} disabled={busy} className="w-full md:w-auto min-w-[210px] sm:min-w-[250px] py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-primary-500 to-amber-400 text-slate-950 font-black text-lg shadow-lg disabled:opacity-50 active:scale-95 transition-transform">{busy ? 'SPINNING…' : session ? <><FaDice className="inline mr-2"/>SPIN</> : 'START GAME'}</button>
-              {spinResult && gain > 0 ? <button onClick={collect} disabled={busy} className="w-full md:w-auto px-7 py-4 rounded-2xl bg-emerald-600 font-bold disabled:opacity-50">COLLECT {gain.toFixed(2)}</button> : <div className="hidden md:block w-[130px]"/>}
+        <section className="mt-3 rounded-2xl border border-white/10 bg-[#0b0f18] p-3 sm:p-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-[1fr_auto_1.2fr_auto_1fr] lg:items-center">
+            <div className="flex items-center justify-center gap-3 lg:justify-start">
+              <div className="text-center"><div className="text-[9px] uppercase tracking-[.18em] text-slate-500">Balance</div><div className="font-black">{wallet.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
+              <div className="h-8 w-px bg-white/10" />
+              <div className="rounded-xl border border-white/10 bg-black/20 p-1"><div className="flex items-center gap-1"><button disabled={busy || bet <= limits.min} onClick={() => adjustBet(-Math.max(limits.min < 1 ? .1 : 1, limits.min))} className="h-8 w-8 rounded-lg bg-white/5 disabled:opacity-30"><FaMinus className="mx-auto text-[10px]"/></button><div className="w-16 text-center"><div className="text-[8px] text-slate-500">BET</div><div className="font-black">{bet.toFixed(limits.min < 1 ? 2 : 0)}</div></div><button disabled={busy || bet >= limits.max} onClick={() => adjustBet(Math.max(limits.min < 1 ? .1 : 1, limits.min))} className="h-8 w-8 rounded-lg bg-white/5 disabled:opacity-30"><FaPlus className="mx-auto text-[10px]"/></button></div></div>
             </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px] sm:text-xs text-gray-500"><span>RTP {rtpDisplay(game)}%</span><span>Min {minBet}</span><span>Max {maxBet}</span><span>Slotopol GID {session?.gid || '—'}</span></div>
+
+            <div className="order-last col-span-2 flex items-center justify-center gap-2 lg:order-none lg:col-span-1">
+              <div className="rounded-xl border border-white/10 bg-black/20 p-1"><div className="flex items-center gap-1"><button disabled={busy || lines <= 1} onClick={() => adjustLines(-1)} className="h-8 w-8 rounded-lg bg-white/5 disabled:opacity-30"><FaMinus className="mx-auto text-[10px]"/></button><div className="w-12 text-center"><div className="text-[8px] text-slate-500">LINES</div><div className="font-black">{lines}</div></div><button disabled={busy || lines >= limits.lines} onClick={() => adjustLines(1)} className="h-8 w-8 rounded-lg bg-white/5 disabled:opacity-30"><FaPlus className="mx-auto text-[10px]"/></button></div></div>
+            </div>
+
+            <div className="col-span-2 flex items-center justify-center gap-2 lg:col-span-1">
+              <button onClick={() => { if (autoRef.current) stopAutoplay(); else runAutoplay(10); }} disabled={!session || busy && !autoRef.current} className="hidden sm:flex h-14 min-w-24 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-xs font-black uppercase tracking-wider text-slate-300 hover:bg-white/[.08] disabled:opacity-30"><FaBolt />{autoRef.current ? 'STOP' : 'AUTO'}</button>
+              <button onClick={() => playSpin()} disabled={!session || busy || autoRef.current} className="h-16 min-w-[180px] flex-1 rounded-2xl bg-gradient-to-r from-amber-300 via-yellow-400 to-orange-400 px-8 text-lg font-black text-slate-950 shadow-[0_12px_40px_rgba(245,158,11,.2)] transition hover:brightness-110 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40"><FaDice className="mr-2 inline"/>{busy ? 'SPINNING' : 'SPIN'}</button>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 lg:justify-end">
+              <button onClick={() => setQuickSpin((v) => !v)} className={`rounded-xl border px-3 py-2 text-[9px] font-black uppercase tracking-wider ${quickSpin ? 'border-amber-300/40 bg-amber-300/10 text-amber-200' : 'border-white/10 text-slate-500'}`}>Quick</button>
+              {canCollect && <button onClick={collect} disabled={busy} className="rounded-xl bg-emerald-600 px-4 py-3 text-xs font-black uppercase tracking-wider text-white disabled:opacity-40">Collect {gain.toFixed(2)}</button>}
+            </div>
           </div>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[9px] uppercase tracking-[.16em] text-slate-600"><span>Min {limits.min}</span><span>Max {limits.max}</span><span>Lines {limits.lines}</span><span>GID {session?.gid || '—'}</span>{autoSpins > 0 && <span className="text-amber-400">Auto {autoSpins}</span>}</div>
         </section>
       </main>
+
+      <AnimatePresence>
+        {showInfo && <motion.div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowInfo(false)}><motion.div initial={{ y: 20, scale: .96 }} animate={{ y: 0, scale: 1 }} exit={{ y: 20, scale: .96 }} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0b0f18] p-5 shadow-2xl"><div className="flex items-center justify-between"><div><div className="text-xs uppercase tracking-[.2em] text-slate-500">Provider</div><h2 className="text-xl font-black">{provider}</h2></div><button onClick={() => setShowInfo(false)} className="rounded-lg bg-white/5 px-3 py-2 text-slate-400">Close</button></div><div className="mt-5 grid grid-cols-2 gap-3 text-sm"><div className="rounded-xl bg-white/[.03] p-3"><div className="text-[9px] text-slate-500">Game</div><div className="font-bold">{game.name}</div></div><div className="rounded-xl bg-white/[.03] p-3"><div className="text-[9px] text-slate-500">Game ID</div><div className="font-bold break-all">{game.id}</div></div><div className="rounded-xl bg-white/[.03] p-3"><div className="text-[9px] text-slate-500">Dimensions</div><div className="font-bold">{reelCount || '—'} × {rowCount || '—'}</div></div><div className="rounded-xl bg-white/[.03] p-3"><div className="text-[9px] text-slate-500">RTP</div><div className="font-bold">{rtp}%</div></div></div><div className="mt-4 rounded-xl border border-amber-300/10 bg-amber-300/[.03] p-3 text-xs text-slate-400">All spin outcomes, wins, free-spin counts and wallet changes are taken from the Slotopol server. The browser does not generate slot outcomes.</div><details className="mt-4"><summary className="cursor-pointer text-xs text-slate-500">Server metadata</summary><pre className="mt-2 max-h-52 overflow-auto rounded-xl bg-black/30 p-3 text-[9px] text-slate-500">{JSON.stringify(info, null, 2)}</pre></details></motion.div></motion.div>}
+      </AnimatePresence>
     </div>
   );
 };
