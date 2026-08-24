@@ -22,7 +22,45 @@ function getGameCategory(provider, gameType) {
 
 function normalizeGame(game) {
   const info = extractGameInfo(game);
-  return { id: info.id, gameId: info.id, name: info.name, provider: info.provider, image: '', isActive: info.enabled, enabled: info.enabled, minBet: 0.1, maxBet: 100, rtpOverride: null, difficulty: 'medium', order: 0, tags: [], category: getGameCategory(info.provider, info.gameType), gameType: info.gameType, rtp: Array.isArray(game.rtp) ? game.rtp : (game.rtp == null ? [] : [game.rtp]), aliases: Array.isArray(game.aliases) ? game.aliases : [], raw: game };
+  const raw = info.raw || {};
+  return {
+    id: info.id,
+    gameId: info.id,
+    name: info.name,
+    provider: info.provider,
+    image: raw.image || raw.image_url || '',
+    isActive: info.enabled,
+    enabled: info.enabled,
+    minBet: 0.1,
+    maxBet: 100,
+    rtpOverride: null,
+    difficulty: 'medium',
+    order: 0,
+    tags: [],
+    category: getGameCategory(info.provider, info.gameType),
+    gameType: info.gameType,
+    reels: Number(raw.sx || 0),
+    rows: Number(raw.sy || 0),
+    lines: Number(raw.ln || raw.lnum || 0),
+    symbolCount: Number(raw.sn || 0),
+    rtp: Array.isArray(raw.rtp) ? raw.rtp : (raw.rtp == null ? [] : [raw.rtp]),
+    aliases: Array.isArray(raw.aliases) ? raw.aliases : [],
+    raw,
+  };
+}
+
+function applyMetadata(game, meta = {}) {
+  return {
+    ...game,
+    image: meta.image || game.image || '',
+    isActive: game.enabled && meta.isActive !== false,
+    minBet: meta.minBet ?? game.minBet,
+    maxBet: meta.maxBet ?? game.maxBet,
+    rtpOverride: meta.rtpOverride ?? null,
+    difficulty: meta.difficulty || 'medium',
+    order: meta.order ?? 0,
+    tags: meta.tags || [],
+  };
 }
 
 exports.getAllGames = async (req, res) => {
@@ -32,14 +70,10 @@ exports.getAllGames = async (req, res) => {
     const metadata = await GameMetadata.find();
     const metaMap = {};
     metadata.forEach((m) => { metaMap[m.gameId] = m; });
-    let filtered = games.map((source) => {
-      const game = normalizeGame(source);
-      const meta = metaMap[game.id] || {};
-      return { ...game, isActive: game.enabled && meta.isActive !== false, minBet: meta.minBet ?? 0.1, maxBet: meta.maxBet ?? 100, rtpOverride: meta.rtpOverride ?? null, difficulty: meta.difficulty || 'medium', order: meta.order ?? 0, tags: meta.tags || [] };
-    });
+    let filtered = games.map((source) => applyMetadata(normalizeGame(source), metaMap[extractGameInfo(source).id]));
     if (provider) filtered = filtered.filter((g) => g.provider.toLowerCase() === String(provider).toLowerCase());
     if (category && category !== 'all' && category !== 'undefined') filtered = filtered.filter((g) => g.category === String(category).toLowerCase());
-    if (search && String(search).trim()) { const s = String(search).toLowerCase().trim(); filtered = filtered.filter((g) => g.name.toLowerCase().includes(s)); }
+    if (search && String(search).trim()) { const s = String(search).toLowerCase().trim(); filtered = filtered.filter((g) => g.name.toLowerCase().includes(s) || g.id.toLowerCase().includes(s)); }
     if (hot === 'true' || isNew === 'true') filtered = filtered.slice(0, 50);
     filtered.sort((a, b) => (a.order || 0) - (b.order || 0));
     res.json({ success: true, games: filtered });
@@ -70,7 +104,7 @@ exports.getGameById = async (req, res) => {
     if (!source) return res.status(404).json({ success: false, error: 'Game not found' });
     const game = normalizeGame(source);
     const meta = await GameMetadata.findOne({ gameId });
-    res.json({ success: true, game: { ...game, isActive: game.enabled && meta?.isActive !== false, minBet: meta?.minBet ?? 0.1, maxBet: meta?.maxBet ?? 100, rtpOverride: meta?.rtpOverride ?? null, difficulty: meta?.difficulty || 'medium' } });
+    res.json({ success: true, game: applyMetadata(game, meta || {}) });
   } catch (error) {
     console.error('Get game by id error:', error);
     res.status(error.status || 500).json({ success: false, error: error.message || 'Failed to fetch game' });
@@ -132,10 +166,6 @@ exports.spin = async (req, res) => {
     const spinResult = await slotopolService.spin(session.slotopol_game_id, bet, Number(selectedLines || session.selected_lines));
     const gain = Number(spinResult?.gain ?? spinResult?.game?.gain ?? spinResult?.result?.gain ?? 0);
 
-    // Debit only after Slotopol confirms the spin. Do not write a synthetic
-    // user_transactions row here: older N999Bet databases may have a stricter
-    // enum for `type`, which caused the former "Data truncated for column type"
-    // error and could leave a player with a deducted balance but no response.
     const [debit] = await pool.query('UPDATE wallets SET main_balance = main_balance - ? WHERE user_id = ? AND main_balance >= ?', [bet, userId, bet]);
     if (!debit.affectedRows) return res.status(409).json({ success: false, error: 'Insufficient balance' });
 
@@ -161,15 +191,14 @@ exports.collectWin = async (req, res) => {
     const result = await slotopolService.collect(session.slotopol_game_id);
 
     if (pendingGain > 0 && !state.settledGain) {
-      const beforeWallet = await Wallet.findByUserId(userId);
-      await Wallet.updateBalance(userId, 'main', pendingGain);
-      const afterWallet = await Wallet.findByUserId(userId);
+      const after = await Wallet.updateBalance(userId, 'main', pendingGain);
       state.settledGain = true;
       state.pendingGain = 0;
       state.providerCollect = result;
       await GameSession.updateState(sessionId, state);
       await GameSession.complete(sessionId);
-      return res.json({ success: true, wallet: Number(afterWallet.main_balance), gain: pendingGain });
+      const wallet = await Wallet.findByUserId(userId);
+      return res.json({ success: true, wallet: Number(wallet.main_balance), gain: pendingGain });
     }
 
     await GameSession.complete(sessionId);
