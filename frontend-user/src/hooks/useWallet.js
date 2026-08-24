@@ -4,12 +4,14 @@ import WalletContext from '../contexts/WalletContext';
 export const useWallet = () => {
   const context = useContext(WalletContext);
   if (!context) {
+    const fetchBalance = async () => {};
     return {
       balance: { main: 0, bonus: 0, commission: 0, locked: 0, total: 0 },
       transactions: [],
       loading: false,
       bankAccounts: [],
-      fetchBalance: async () => {},
+      fetchBalance,
+      refreshBalance: fetchBalance,
       fetchTransactions: async () => {},
       fetchBankAccounts: async () => {},
       requestDeposit: async () => {},
@@ -19,7 +21,10 @@ export const useWallet = () => {
       deleteBankAccount: async () => {},
     };
   }
-  return context;
+  return {
+    ...context,
+    refreshBalance: context.refreshBalance || context.fetchBalance || (async () => {}),
+  };
 };
 
 export default useWallet;
