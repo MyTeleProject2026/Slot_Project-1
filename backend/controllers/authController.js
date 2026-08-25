@@ -42,18 +42,13 @@ exports.register = async (req, res) => {
     const { username, password, fullName } = req.body;
     const phone = normalizePhone(req.body.phone);
     if (!phone) return res.status(400).json({ success: false, error: 'Phone number is required' });
-
     const existingUsername = await User.findByUsername(username);
     if (existingUsername) return res.status(400).json({ success: false, error: 'Username taken' });
     const existingPhone = await User.findByPhone(phone);
     if (existingPhone) return res.status(400).json({ success: false, error: 'Phone number already registered' });
-
     const hashed = await bcrypt.hash(password, 10);
-    // Keep email as an internal nullable field only; N999Bet identity is phone-based.
-    const email = null;
-    const userId = await User.create({ username, email, password: hashed, fullName, phone });
+    const userId = await User.create({ username, email: null, password: hashed, fullName, phone });
     await Wallet.create(userId);
-
     const user = await User.findById(userId);
     const token = generateToken(userId, ROLES.USER);
     const refreshToken = generateRefreshToken(userId);
@@ -66,7 +61,10 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const identifier = String(req.body.identifier ?? req.body.username ?? '').trim();
+    const { password } = req.body;
+    if (!identifier) return res.status(400).json({ success: false, error: 'Phone number or username is required' });
+
     const adminUser = getAdminFromEnv(identifier, password);
     if (adminUser) {
       const token = generateToken(adminUser.id, adminUser.role);
@@ -74,13 +72,11 @@ exports.login = async (req, res) => {
       return res.json({ success: true, token, refreshToken, user: adminUser, wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 } });
     }
 
-    const normalizedIdentifier = String(identifier || '').trim();
-    const normalizedPhone = normalizePhone(normalizedIdentifier);
+    const normalizedPhone = normalizePhone(identifier);
     let user = await User.findByPhone(normalizedPhone);
-    if (!user) user = await User.findByUsername(normalizedIdentifier);
+    if (!user) user = await User.findByUsername(identifier);
     if (!user) return res.status(401).json({ success: false, error: 'Invalid phone number or username' });
     if (user.status !== 'active') return res.status(403).json({ success: false, error: 'Account inactive' });
-
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     await User.updateLastLogin(user.id, req.ip);
