@@ -15,6 +15,13 @@ function extract(game, meta) {
   const { id, provider, name } = gameIdentity(game);
   if (!id || !provider || !name) return null;
   const enabled = game?.enabled !== false && game?.active !== false && game?.status !== 'disabled' && meta?.isActive !== false;
+  const reels = Number(game?.sx ?? game?.reels ?? 0);
+  const rows = Number(game?.sy ?? game?.rows ?? 0);
+  const lines = Number(game?.ln ?? game?.lnum ?? game?.lines ?? 0);
+  const symbols = Number(game?.sn ?? game?.symbolCount ?? 0);
+  const gameType = Number(game?.gt ?? game?.gameType ?? 1);
+  const rtp = Array.isArray(game?.rtp) ? game.rtp : (game?.rtp != null ? [game.rtp] : []);
+
   return {
     id,
     name,
@@ -30,8 +37,24 @@ function extract(game, meta) {
     order: meta?.order ?? 0,
     tags: meta?.tags || [],
     category: getGameCategory(provider),
-    rtp: Array.isArray(game?.rtp) ? game.rtp : game?.rtp != null ? [game.rtp] : [],
-    aliases: game?.aliases || [],
+    rtp,
+    aliases: Array.isArray(game?.aliases) ? game.aliases : [],
+    gameType,
+    reels,
+    rows,
+    lines,
+    symbolCount: symbols,
+    capabilities: {
+      gameType,
+      reels,
+      rows,
+      lines,
+      symbolCount: symbols,
+      rtpOptions: rtp,
+      serverAuthoritative: true,
+      operations: { createSession:true, spin:true, bet:true, collect:true, doubleUp:true, selection:true, mode:true },
+      renderer: { dynamicGrid: reels > 0 && rows > 0, provider, gameId: id },
+    },
   };
 }
 
