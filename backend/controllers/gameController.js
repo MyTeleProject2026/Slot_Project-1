@@ -81,32 +81,19 @@ exports.startGame = async (req, res) => {
     const userId = req.userId || req.user?.id;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
     if (typeof gameId !== 'string' || !gameId.includes('/')) return res.status(400).json({ success: false, error: 'Invalid game ID' });
-
     let userRows;
-    try {
-      [userRows] = await pool.query('SELECT id, username, phone, status, club_id FROM users WHERE id = ?', [userId]);
-    } catch {
-      [userRows] = await pool.query('SELECT id, username, phone, status FROM users WHERE id = ?', [userId]);
-      userRows = userRows.map((row) => ({ ...row, club_id: 1 }));
-    }
+    try { [userRows] = await pool.query('SELECT id, username, phone, status, club_id FROM users WHERE id = ?', [userId]); }
+    catch { [userRows] = await pool.query('SELECT id, username, phone, status FROM users WHERE id = ?', [userId]); userRows = userRows.map((row) => ({ ...row, club_id: 1 })); }
     if (!userRows.length) return res.status(404).json({ success: false, error: 'User not found' });
     if (userRows[0].status && userRows[0].status !== 'active') return res.status(403).json({ success: false, error: 'User account is not active' });
-
     const clubId = Number(userRows[0].club_id || process.env.N999BET_SLOTOPOL_CLUB_ID || 1);
-    const requestedBet = Number(betAmount || 1);
-    const requestedLines = Number(selectedLines || 20);
+    const requestedBet = Number(betAmount || 1); const requestedLines = Number(selectedLines || 20);
     if (!Number.isFinite(requestedBet) || requestedBet <= 0) return res.status(400).json({ success: false, error: 'Invalid bet amount' });
-
     const wallet = await Wallet.findByUserId(userId);
     if (!wallet) return res.status(404).json({ success: false, error: 'Wallet not found' });
     if (Number(wallet.main_balance) < requestedBet) return res.status(409).json({ success: false, error: 'Insufficient balance' });
-
-    const [provider, ...gameParts] = gameId.split('/');
-    const game = gameParts.join('/');
+    const [provider, ...gameParts] = gameId.split('/'); const game = gameParts.join('/');
     if (!provider || !game) return res.status(400).json({ success: false, error: 'Invalid game ID' });
-
-    // Slotopol player identity is keyed by the N999Bet phone number.
-    // Email is deliberately not used for Slotopol player provisioning.
     const playerPhone = String(userRows[0].phone || '').trim();
     if (!playerPhone) return res.status(422).json({ success: false, error: 'Player phone number is required before playing Slotopol games', code: 'PLAYER_PHONE_REQUIRED' });
     const playerName = userRows[0].username || `N999Bet-${userId}`;
@@ -114,10 +101,7 @@ exports.startGame = async (req, res) => {
     const sessionData = await slotopolService.startGame(clubId, provider, game, slotopolUid);
     const sessionId = await GameSession.create({ userId, clubId, slotopolGameId: sessionData.gid, gameAlias: `${provider}/${game}`, providerName: provider, gameName: game, betAmount: requestedBet, selectedLines: requestedLines, state: { provider: sessionData, slotopolUid, slotopolPhone: playerPhone, pendingGain: 0, lastBet: requestedBet, settledBet: false, settledGain: false } });
     res.json({ success: true, sessionId, session: sessionData, slotopolUid, slotopolPhone: playerPhone, wallet: Number(wallet.main_balance) });
-  } catch (error) {
-    console.error('Start game error:', error);
-    res.status(error.status === 403 ? 403 : (error.status || 502)).json({ success: false, error: error.message || 'Failed to start game', code: error.code || 'GAME_START_FAILED' });
-  }
+  } catch (error) { console.error('Start game error:', error); res.status(error.status === 403 ? 403 : (error.status || 502)).json({ success: false, error: error.message || 'Failed to start game', code: error.code || 'GAME_START_FAILED' }); }
 };
 
 exports.spin = async (req, res) => {
@@ -158,4 +142,37 @@ exports.collectWin = async (req, res) => {
     await GameSession.complete(sessionId);
     res.json({ success: true, wallet: Number((await Wallet.findByUserId(userId)).main_balance), gain: 0 });
   } catch (error) { console.error('Collect win error:', error); res.status(error.status || 500).json({ success: false, error: error.message || 'Collect failed' }); }
+};
+
+exports.doubleUp = async (req, res) => {
+  try {
+    const { sessionId, multiplier } = req.body; const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const session = await GameSession.findById(sessionId);
+    if (!session || Number(session.user_id) !== Number(userId)) return res.status(404).json({ success: false, error: 'Session not found' });
+    const mult = Number(multiplier);
+    if (![2, 4, 8].includes(mult)) return res.status(400).json({ success: false, error: 'Unsupported double-up multiplier' });
+    const state = typeof session.state === 'string' ? JSON.parse(session.state || '{}') : (session.state || {});
+    const pendingGain = Number(state.pendingGain || 0);
+    if (pendingGain <= 0 || state.settledGain) return res.status(409).json({ success: false, error: 'No pending gain available for double-up' });
+    const result = await slotopolService.doubleUp(session.slotopol_game_id, mult);
+    const gain = Number(result?.gain ?? result?.game?.gain ?? result?.result?.gain ?? 0);
+    state.pendingGain = Math.max(0, gain); state.providerDoubleUp = result;
+    await GameSession.updateState(sessionId, state);
+    res.json({ success: true, result, gain, wallet: Number((await Wallet.findByUserId(userId)).main_balance) });
+  } catch (error) { console.error('Double-up error:', error); res.status(error.status || 500).json({ success: false, error: error.message || 'Double-up failed' }); }
+};
+
+exports.setLines = async (req, res) => {
+  try {
+    const { sessionId, selectedLines } = req.body; const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const session = await GameSession.findById(sessionId);
+    if (!session || Number(session.user_id) !== Number(userId)) return res.status(404).json({ success: false, error: 'Session not found' });
+    const lines = Number(selectedLines);
+    if (!Number.isInteger(lines) || lines <= 0) return res.status(400).json({ success: false, error: 'Invalid line count' });
+    const result = await slotopolService.setLines(session.slotopol_game_id, lines);
+    await pool.query('UPDATE game_sessions SET selected_lines = ?, updated_at = NOW() WHERE id = ?', [lines, sessionId]);
+    res.json({ success: true, result, selectedLines: lines });
+  } catch (error) { console.error('Set lines error:', error); res.status(error.status || 500).json({ success: false, error: error.message || 'Failed to set lines' }); }
 };
