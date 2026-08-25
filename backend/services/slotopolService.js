@@ -1,5 +1,4 @@
 const axios = require('axios');
-const crypto = require('crypto');
 const dotenv = require('dotenv');
 const slotopolConfig = require('../config/slotopol');
 
@@ -14,6 +13,14 @@ const unwrap = (r) => {
   return r?.list || r?.games || r?.clubs || r?.data?.list || r?.data?.games || r?.data || [];
 };
 const normalizeGameId = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9_\/]/g, '');
+const normalizePhone = (value) => {
+  const raw = String(value || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) return digits.slice(2);
+  if (digits.startsWith('0')) return `95${digits.slice(1)}`;
+  return digits;
+};
 
 function accounts() {
   try {
@@ -110,32 +117,46 @@ class SlotopolService {
     }
   }
 
-  static async findSlotopolUserByEmail(email) {
-    const response = await this.request('GET', `/signis?email=${encodeURIComponent(email)}`);
+  static async findSlotopolUserByPhone(phone) {
+    const normalized = normalizePhone(phone);
+    if (!normalized) return 0;
+    const response = await this.request('GET', `/user/phone?phone=${encodeURIComponent(normalized)}`);
     return Number(response?.uid || response?.data?.uid || 0);
   }
 
-  static async createSlotopolUser(email, displayName) {
-    const secret = crypto.randomBytes(24).toString('hex');
-    const response = await this.request('POST', '/signup', { email, secret, name: displayName || email.split('@')[0] });
+  static async createSlotopolUserByPhone(phone, displayName) {
+    const normalized = normalizePhone(phone);
+    if (!normalized) throw new Error('Player phone number is required for Slotopol identity');
+    const response = await this.request('POST', '/user/phone', { phone: normalized, name: displayName || `N999Bet-${normalized}` });
     const uid = Number(response?.uid || response?.data?.uid || response?.user?.uid || 0);
-    if (!uid) throw new Error('Slotopol signup succeeded without returning a UID');
+    if (!uid) throw new Error('Slotopol phone provisioning succeeded without returning a UID');
     return uid;
   }
 
-  // Every N999Bet player gets a dedicated Slotopol UID. The old club-level
-  // SLOTOPOL_CLUB_ACCOUNTS uid remains only as a legacy fallback for admin/test use.
-  static async ensurePlayerUid(userId, clubId, email, displayName) {
+  // Every N999Bet player gets a dedicated Slotopol UID. Identity is keyed by
+  // the player's phone number, never by the player's email address.
+  static async ensurePlayerUid(userId, clubId, phone, displayName) {
     const SlotopolPlayer = require('../models/SlotopolPlayer');
     const resolved = this.resolveClubId(clubId);
-    const existing = await SlotopolPlayer.find(userId, resolved);
-    if (existing?.slotopol_uid) return Number(existing.slotopol_uid);
-    if (!email) throw new Error('Player email is required to create a Slotopol identity');
+    const normalized = normalizePhone(phone);
+    if (!normalized) throw new Error('Player phone number is required to create a Slotopol identity');
 
-    let uid = await this.findSlotopolUserByEmail(email);
-    if (!uid) uid = await this.createSlotopolUser(email, displayName);
-    if (!Number.isInteger(uid) || uid <= 0) throw new Error('Invalid Slotopol UID returned for player');
-    await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: uid, email });
+    const existing = await SlotopolPlayer.find(userId, resolved);
+    if (existing?.slotopol_uid) {
+      if (existing.phone !== normalized) await SlotopolPlayer.setPhone(userId, resolved, normalized);
+      return Number(existing.slotopol_uid);
+    }
+
+    const existingByPhone = await SlotopolPlayer.findByPhone(normalized, resolved);
+    if (existingByPhone?.slotopol_uid) {
+      await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: Number(existingByPhone.slotopol_uid), phone: normalized });
+      return Number(existingByPhone.slotopol_uid);
+    }
+
+    let uid = await this.findSlotopolUserByPhone(normalized);
+    if (!uid) uid = await this.createSlotopolUserByPhone(normalized, displayName);
+    if (!Number.isInteger(uid) || uid <= 0) throw new Error('Invalid Slotopol UID returned for phone identity');
+    await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: uid, phone: normalized });
     return uid;
   }
 
