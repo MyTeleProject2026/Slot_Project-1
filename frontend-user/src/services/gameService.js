@@ -10,6 +10,35 @@ const getCachedData = (key) => {
 const setCachedData = (key, data) => cache.set(key, { data, timestamp: Date.now() });
 export const clearCache = () => cache.clear();
 
+const normalizeCapabilities = (payload) => {
+  const root = payload?.game || payload?.data?.game || payload || {};
+  const capabilities = root.capabilities || payload?.capabilities || {};
+  const raw = root.raw || payload?.raw || {};
+  return {
+    ...payload,
+    game: {
+      ...root,
+      id: String(root.id || root.game_id || raw.id || raw.game_id || ''),
+      name: root.name || raw.name || '',
+      provider: root.provider || raw.provider || raw.prov || '',
+      raw,
+      capabilities: {
+        gameType: Number(capabilities.gameType ?? raw.gt ?? 1),
+        reels: Number(capabilities.reels ?? raw.sx ?? 0),
+        rows: Number(capabilities.rows ?? raw.sy ?? 0),
+        lines: Number(capabilities.lines ?? raw.ln ?? raw.lnum ?? 0),
+        symbolCount: Number(capabilities.symbolCount ?? raw.sn ?? 0),
+        rtpOptions: Array.isArray(capabilities.rtpOptions)
+          ? capabilities.rtpOptions
+          : (Array.isArray(raw.rtp) ? raw.rtp : []),
+        serverAuthoritative: capabilities.serverAuthoritative !== false,
+        operations: capabilities.operations || {},
+        renderer: capabilities.renderer || {},
+      },
+    },
+  };
+};
+
 export const gameService = {
   // Player-facing catalogue is club-scoped. The backend resolves the
   // authenticated user's N999Bet club and only returns games enabled by
@@ -43,9 +72,16 @@ export const gameService = {
     const cacheKey = getCacheKey('/games/capabilities', { id });
     const cached = getCachedData(cacheKey);
     if (cached) return cached;
-    const response = await api.get(`/games/capabilities/${encodeURIComponent(id)}`);
-    setCacheData(cacheKey, response.data);
-    return response.data;
+    try {
+      const response = await api.get(`/games/capabilities/${encodeURIComponent(id)}`);
+      const data = normalizeCapabilities(response.data);
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      const stale = cache.get(cacheKey);
+      if (stale) return stale.data;
+      throw error;
+    }
   },
 
   getProviders: async () => {
