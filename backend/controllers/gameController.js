@@ -84,9 +84,9 @@ exports.startGame = async (req, res) => {
 
     let userRows;
     try {
-      [userRows] = await pool.query('SELECT id, username, email, status, club_id FROM users WHERE id = ?', [userId]);
+      [userRows] = await pool.query('SELECT id, username, phone, status, club_id FROM users WHERE id = ?', [userId]);
     } catch {
-      [userRows] = await pool.query('SELECT id, username, email, status FROM users WHERE id = ?', [userId]);
+      [userRows] = await pool.query('SELECT id, username, phone, status FROM users WHERE id = ?', [userId]);
       userRows = userRows.map((row) => ({ ...row, club_id: 1 }));
     }
     if (!userRows.length) return res.status(404).json({ success: false, error: 'User not found' });
@@ -105,14 +105,15 @@ exports.startGame = async (req, res) => {
     const game = gameParts.join('/');
     if (!provider || !game) return res.status(400).json({ success: false, error: 'Invalid game ID' });
 
-    // Resolve a unique Slotopol UID for this N999Bet player. Never use the
-    // club-level legacy UID for normal player sessions.
-    const playerEmail = userRows[0].email || `${userRows[0].username || `user-${userId}`}@n999bet.local`;
+    // Slotopol player identity is keyed by the N999Bet phone number.
+    // Email is deliberately not used for Slotopol player provisioning.
+    const playerPhone = String(userRows[0].phone || '').trim();
+    if (!playerPhone) return res.status(422).json({ success: false, error: 'Player phone number is required before playing Slotopol games', code: 'PLAYER_PHONE_REQUIRED' });
     const playerName = userRows[0].username || `N999Bet-${userId}`;
-    const slotopolUid = await slotopolService.ensurePlayerUid(userId, clubId, playerEmail, playerName);
+    const slotopolUid = await slotopolService.ensurePlayerUid(userId, clubId, playerPhone, playerName);
     const sessionData = await slotopolService.startGame(clubId, provider, game, slotopolUid);
-    const sessionId = await GameSession.create({ userId, clubId, slotopolGameId: sessionData.gid, gameAlias: `${provider}/${game}`, providerName: provider, gameName: game, betAmount: requestedBet, selectedLines: requestedLines, state: { provider: sessionData, slotopolUid, pendingGain: 0, lastBet: requestedBet, settledBet: false, settledGain: false } });
-    res.json({ success: true, sessionId, session: sessionData, slotopolUid, wallet: Number(wallet.main_balance) });
+    const sessionId = await GameSession.create({ userId, clubId, slotopolGameId: sessionData.gid, gameAlias: `${provider}/${game}`, providerName: provider, gameName: game, betAmount: requestedBet, selectedLines: requestedLines, state: { provider: sessionData, slotopolUid, slotopolPhone: playerPhone, pendingGain: 0, lastBet: requestedBet, settledBet: false, settledGain: false } });
+    res.json({ success: true, sessionId, session: sessionData, slotopolUid, slotopolPhone: playerPhone, wallet: Number(wallet.main_balance) });
   } catch (error) {
     console.error('Start game error:', error);
     res.status(error.status === 403 ? 403 : (error.status || 502)).json({ success: false, error: error.message || 'Failed to start game', code: error.code || 'GAME_START_FAILED' });
