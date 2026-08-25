@@ -45,10 +45,7 @@ class SlotopolService {
   static async getToken() {
     if (token && tokenExpiry > Date.now() + 30000) return token;
     try {
-      const response = await axios.post(`${SLOTOPOL_URL}/signin`, {
-        email: slotopolConfig.adminEmail,
-        secret: slotopolConfig.adminPassword,
-      }, { timeout: 30000 });
+      const response = await axios.post(`${SLOTOPOL_URL}/signin`, { email: slotopolConfig.adminEmail, secret: slotopolConfig.adminPassword }, { timeout: 30000 });
       token = response.data?.access || response.data?.token || response.data?.data?.access;
       if (!token) throw new Error('No token returned by Slotopol signin');
       tokenExpiry = Date.now() + 55 * 60 * 1000;
@@ -62,9 +59,7 @@ class SlotopolService {
   static async request(method, endpoint, data) {
     try {
       const access = await this.getToken();
-      const response = await axios({ method, url: `${SLOTOPOL_URL}${endpoint}`, headers: {
-        Authorization: `Bearer ${access}`, 'Content-Type': 'application/json', Accept: 'application/json'
-      }, data, timeout: 30000 });
+      const response = await axios({ method, url: `${SLOTOPOL_URL}${endpoint}`, headers: { Authorization: `Bearer ${access}`, 'Content-Type': 'application/json', Accept: 'application/json' }, data, timeout: 30000 });
       return response.data;
     } catch (error) {
       if (error.response?.status === 401) { token = null; tokenExpiry = 0; }
@@ -81,104 +76,69 @@ class SlotopolService {
     const cid = Number(account.cid ?? process.env.SLOTOPOL_DEFAULT_CID ?? resolvedClubId);
     const uid = Number(account.uid ?? process.env.SLOTOPOL_DEFAULT_UID);
     if (!Number.isInteger(cid) || cid <= 0) throw new Error(`No Slotopol CID configured for N999Bet club ${resolvedClubId}`);
-    if (cid !== resolvedClubId) {
-      const error = new Error(`N999Bet requires Slotopol CID ${resolvedClubId}, but the configured account uses CID ${cid}`);
-      error.status = 500; error.code = 'N999BET_SLOTOPOL_CID_MISMATCH'; throw error;
-    }
+    if (cid !== resolvedClubId) { const error = new Error(`N999Bet requires Slotopol CID ${resolvedClubId}, but the configured account uses CID ${cid}`); error.status = 500; error.code = 'N999BET_SLOTOPOL_CID_MISMATCH'; throw error; }
     return { clubId: resolvedClubId, cid, uid };
   }
 
-  static async getClubGames(cid) {
-    return unwrap(await this.request('GET', `/game/list?inc=all&cid=${encodeURIComponent(cid)}&sort=true`));
-  }
-
+  static async getClubGames(cid) { return unwrap(await this.request('GET', `/game/list?inc=all&cid=${encodeURIComponent(cid)}&sort=true`)); }
   static async getCatalog() { return unwrap(await this.request('GET', '/game/algs')); }
-
-  static async getGameList(clubId) {
-    const resolved = this.resolveClubId(clubId);
-    const { cid } = this.account(resolved);
-    return (await this.getClubGames(cid)).filter(g => g.enabled !== false && g.active !== false && g.status !== 'disabled');
-  }
+  static async getGameList(clubId) { const resolved = this.resolveClubId(clubId); const { cid } = this.account(resolved); return (await this.getClubGames(cid)).filter(g => g.enabled !== false && g.active !== false && g.status !== 'disabled'); }
 
   static async assertGameEnabledForClub(clubId, provider, game) {
-    const resolved = this.resolveClubId(clubId);
-    const { cid } = this.account(resolved);
-    const requestedId = normalizeGameId(`${provider}/${game}`);
-    const list = await this.getClubGames(cid);
-    const enabled = list.some(item => {
-      const aliases = Array.isArray(item.aliases) ? item.aliases : [];
-      const itemId = normalizeGameId(item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : ''));
-      return item.enabled !== false && item.active !== false && item.status !== 'disabled' &&
-        (itemId === requestedId || aliases.some(a => normalizeGameId(`${a.prov}/${a.name}`) === requestedId));
-    });
-    if (!enabled) {
-      const error = new Error(`Game ${provider}/${game} is not enabled for N999Bet Slotopol club ${resolved}`);
-      error.status = 403; error.code = 'SLOTOPOL_GAME_DISABLED_FOR_CLUB'; throw error;
-    }
+    const resolved = this.resolveClubId(clubId); const { cid } = this.account(resolved); const requestedId = normalizeGameId(`${provider}/${game}`); const list = await this.getClubGames(cid);
+    const enabled = list.some(item => { const aliases = Array.isArray(item.aliases) ? item.aliases : []; const itemId = normalizeGameId(item.game_id || item.id || (item.prov && item.name ? `${item.prov}/${item.name}` : '')); return item.enabled !== false && item.active !== false && item.status !== 'disabled' && (itemId === requestedId || aliases.some(a => normalizeGameId(`${a.prov}/${a.name}`) === requestedId)); });
+    if (!enabled) { const error = new Error(`Game ${provider}/${game} is not enabled for N999Bet Slotopol club ${resolved}`); error.status = 403; error.code = 'SLOTOPOL_GAME_DISABLED_FOR_CLUB'; throw error; }
   }
 
-  static async findSlotopolUserByPhone(phone) {
-    const normalized = normalizePhone(phone);
-    if (!normalized) return 0;
-    const response = await this.request('GET', `/user/phone?phone=${encodeURIComponent(normalized)}`);
-    return Number(response?.uid || response?.data?.uid || 0);
-  }
-
-  static async createSlotopolUserByPhone(phone, displayName) {
-    const normalized = normalizePhone(phone);
-    if (!normalized) throw new Error('Player phone number is required for Slotopol identity');
-    const response = await this.request('POST', '/user/phone', { phone: normalized, name: displayName || `N999Bet-${normalized}` });
-    const uid = Number(response?.uid || response?.data?.uid || response?.user?.uid || 0);
-    if (!uid) throw new Error('Slotopol phone provisioning succeeded without returning a UID');
-    return uid;
-  }
+  static async findSlotopolUserByPhone(phone) { const normalized = normalizePhone(phone); if (!normalized) return 0; const response = await this.request('GET', `/user/phone?phone=${encodeURIComponent(normalized)}`); return Number(response?.uid || response?.data?.uid || 0); }
+  static async createSlotopolUserByPhone(phone, displayName) { const normalized = normalizePhone(phone); if (!normalized) throw new Error('Player phone number is required for Slotopol identity'); const response = await this.request('POST', '/user/phone', { phone: normalized, name: displayName || `N999Bet-${normalized}` }); const uid = Number(response?.uid || response?.data?.uid || response?.user?.uid || 0); if (!uid) throw new Error('Slotopol phone provisioning succeeded without returning a UID'); return uid; }
 
   static async ensurePlayerUid(userId, clubId, phone, displayName) {
-    const SlotopolPlayer = require('../models/SlotopolPlayer');
-    const resolved = this.resolveClubId(clubId);
-    const normalized = normalizePhone(phone);
-    if (!normalized) throw new Error('Player phone number is required to create a Slotopol identity');
+    const SlotopolPlayer = require('../models/SlotopolPlayer'); const resolved = this.resolveClubId(clubId); const normalized = normalizePhone(phone); if (!normalized) throw new Error('Player phone number is required to create a Slotopol identity');
     const existing = await SlotopolPlayer.find(userId, resolved);
-    if (existing?.slotopol_uid) {
-      if (existing.phone !== normalized) await SlotopolPlayer.setPhone(userId, resolved, normalized);
-      return Number(existing.slotopol_uid);
-    }
+    if (existing?.slotopol_uid) { if (existing.phone !== normalized) await SlotopolPlayer.setPhone(userId, resolved, normalized); return Number(existing.slotopol_uid); }
     const existingByPhone = await SlotopolPlayer.findByPhone(normalized, resolved);
-    if (existingByPhone?.slotopol_uid) {
-      await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: Number(existingByPhone.slotopol_uid), phone: normalized });
-      return Number(existingByPhone.slotopol_uid);
-    }
-    let uid = await this.findSlotopolUserByPhone(normalized);
-    if (!uid) uid = await this.createSlotopolUserByPhone(normalized, displayName);
-    if (!Number.isInteger(uid) || uid <= 0) throw new Error('Invalid Slotopol UID returned for phone identity');
-    await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: uid, phone: normalized });
-    return uid;
+    if (existingByPhone?.slotopol_uid) { await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: Number(existingByPhone.slotopol_uid), phone: normalized }); return Number(existingByPhone.slotopol_uid); }
+    let uid = await this.findSlotopolUserByPhone(normalized); if (!uid) uid = await this.createSlotopolUserByPhone(normalized, displayName); if (!Number.isInteger(uid) || uid <= 0) throw new Error('Invalid Slotopol UID returned for phone identity');
+    await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: uid, phone: normalized }); return uid;
   }
 
-  static async startGame(clubId, provider, game, playerUid) {
-    const resolved = this.resolveClubId(clubId);
-    const { cid } = this.account(resolved);
-    const uid = Number(playerUid);
+  static async getPlayerWallet(clubId, uid) {
+    const resolved = this.resolveClubId(clubId); const playerUid = Number(uid); if (!Number.isInteger(playerUid) || playerUid <= 0) throw new Error('Invalid Slotopol UID');
+    const response = await this.request('POST', '/prop/wallet/get', { cid: resolved, uid: playerUid });
+    const wallet = Number(response?.wallet ?? response?.data?.wallet);
+    if (!Number.isFinite(wallet)) throw new Error(`Slotopol returned an invalid wallet for UID ${playerUid}`);
+    return wallet;
+  }
+
+  static async adjustPlayerWallet(clubId, uid, amount) {
+    const resolved = this.resolveClubId(clubId); const playerUid = Number(uid); const delta = Number(amount);
+    if (!Number.isInteger(playerUid) || playerUid <= 0) throw new Error('Invalid Slotopol UID');
+    if (!Number.isFinite(delta) || delta === 0) return this.getPlayerWallet(resolved, playerUid);
+    const response = await this.request('POST', '/prop/wallet/add', { cid: resolved, uid: playerUid, sum: delta });
+    const wallet = Number(response?.wallet ?? response?.data?.wallet);
+    if (!Number.isFinite(wallet)) throw new Error(`Slotopol returned an invalid wallet after adjustment for UID ${playerUid}`);
+    return wallet;
+  }
+
+  static async syncPlayerWallet(clubId, uid, targetBalance) {
+    const target = Number(targetBalance); if (!Number.isFinite(target) || target < 0) throw new Error('Invalid target wallet balance');
+    const current = await this.getPlayerWallet(clubId, uid); const delta = target - current;
+    if (Math.abs(delta) < 0.0000001) return current;
+    return this.adjustPlayerWallet(clubId, uid, delta);
+  }
+
+  static async startGame(clubId, provider, game, playerUid, walletBalance) {
+    const resolved = this.resolveClubId(clubId); const { cid } = this.account(resolved); const uid = Number(playerUid);
     if (!Number.isInteger(uid) || uid <= 0) throw new Error(`Invalid Slotopol UID for N999Bet player in club ${resolved}`);
     await this.assertGameEnabledForClub(resolved, provider, game);
+    if (walletBalance != null) await this.syncPlayerWallet(resolved, uid, walletBalance);
     return this.request('POST', '/game/new', { cid, uid, alias: `${provider}/${game}` });
   }
 
-  static async spin(gid, bet, lines) {
-    const data = { gid: Number(gid) };
-    if (bet != null) data.bet = Number(bet);
-    if (lines != null) data.sel = Number(lines);
-    return this.request('POST', '/slot/spin', data);
-  }
-
-  static async doubleUp(gid, multiplier) {
-    return this.request('POST', '/slot/doubleup', { gid: Number(gid), mult: Number(multiplier) });
-  }
-
-  static async setLines(gid, lines) {
-    return this.request('POST', '/slot/sel/set', { gid: Number(gid), sel: Number(lines) });
-  }
-
+  static async spin(gid, bet, lines) { const data = { gid: Number(gid) }; if (bet != null) data.bet = Number(bet); if (lines != null) data.sel = Number(lines); return this.request('POST', '/slot/spin', data); }
+  static async doubleUp(gid, multiplier) { return this.request('POST', '/slot/doubleup', { gid: Number(gid), mult: Number(multiplier) }); }
+  static async setLines(gid, lines) { return this.request('POST', '/slot/sel/set', { gid: Number(gid), sel: Number(lines) }); }
   static async collect(gid) { return this.request('POST', '/slot/collect', { gid: Number(gid) }); }
   static async getGameInfo(gid) { return this.request('POST', '/game/info', { gid: Number(gid) }); }
   static async getGameImages() { return { images: [] }; }
