@@ -4,16 +4,16 @@ class User {
   static async create(data) {
     const { username, email, password, fullName, phone, role = 'user', referredBy } = data;
     const [result] = await pool.query(
-      `INSERT INTO users (username, email, password, full_name, phone, role, referred_by) 
+      `INSERT INTO users (username, email, password, full_name, phone, role, referred_by)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [username, email, password, fullName, phone, role, referredBy || null]
+      [username, email || null, password, fullName, phone, role, referredBy || null]
     );
     return result.insertId;
   }
 
   static async findById(id) {
     const [rows] = await pool.query(
-      `SELECT id, username, email, full_name, phone, role, status, referral_code, created_at, last_login 
+      `SELECT id, username, email, full_name, phone, role, status, referral_code, created_at, last_login
        FROM users WHERE id = ?`,
       [id]
     );
@@ -25,7 +25,13 @@ class User {
     return rows[0];
   }
 
+  static async findByPhone(phone) {
+    const [rows] = await pool.query('SELECT * FROM users WHERE phone = ?', [phone]);
+    return rows[0];
+  }
+
   static async findByEmail(email) {
+    if (!email) return null;
     const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
     return rows[0];
   }
@@ -74,7 +80,7 @@ class User {
     if (filters.role) { conditions.push('role = ?'); values.push(filters.role); }
     if (filters.status) { conditions.push('status = ?'); values.push(filters.status); }
     if (filters.search) {
-      conditions.push('(username LIKE ? OR email LIKE ? OR full_name LIKE ?)');
+      conditions.push('(username LIKE ? OR phone LIKE ? OR full_name LIKE ?)');
       values.push(`%${filters.search}%`, `%${filters.search}%`, `%${filters.search}%`);
     }
     if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
