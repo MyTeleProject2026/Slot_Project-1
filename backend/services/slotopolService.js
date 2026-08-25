@@ -133,26 +133,21 @@ class SlotopolService {
     return uid;
   }
 
-  // Every N999Bet player gets a dedicated Slotopol UID. Identity is keyed by
-  // the player's phone number, never by the player's email address.
   static async ensurePlayerUid(userId, clubId, phone, displayName) {
     const SlotopolPlayer = require('../models/SlotopolPlayer');
     const resolved = this.resolveClubId(clubId);
     const normalized = normalizePhone(phone);
     if (!normalized) throw new Error('Player phone number is required to create a Slotopol identity');
-
     const existing = await SlotopolPlayer.find(userId, resolved);
     if (existing?.slotopol_uid) {
       if (existing.phone !== normalized) await SlotopolPlayer.setPhone(userId, resolved, normalized);
       return Number(existing.slotopol_uid);
     }
-
     const existingByPhone = await SlotopolPlayer.findByPhone(normalized, resolved);
     if (existingByPhone?.slotopol_uid) {
       await SlotopolPlayer.create({ userId, clubId: resolved, slotopolUid: Number(existingByPhone.slotopol_uid), phone: normalized });
       return Number(existingByPhone.slotopol_uid);
     }
-
     let uid = await this.findSlotopolUserByPhone(normalized);
     if (!uid) uid = await this.createSlotopolUserByPhone(normalized, displayName);
     if (!Number.isInteger(uid) || uid <= 0) throw new Error('Invalid Slotopol UID returned for phone identity');
@@ -175,6 +170,15 @@ class SlotopolService {
     if (lines != null) data.sel = Number(lines);
     return this.request('POST', '/slot/spin', data);
   }
+
+  static async doubleUp(gid, multiplier) {
+    return this.request('POST', '/slot/doubleup', { gid: Number(gid), mult: Number(multiplier) });
+  }
+
+  static async setLines(gid, lines) {
+    return this.request('POST', '/slot/sel/set', { gid: Number(gid), sel: Number(lines) });
+  }
+
   static async collect(gid) { return this.request('POST', '/slot/collect', { gid: Number(gid) }); }
   static async getGameInfo(gid) { return this.request('POST', '/game/info', { gid: Number(gid) }); }
   static async getGameImages() { return { images: [] }; }
