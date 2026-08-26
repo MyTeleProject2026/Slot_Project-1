@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -18,8 +18,10 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const authGeneration = useRef(0);
 
   const clearSession = useCallback(() => {
+    authGeneration.current += 1;
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     setUser(null);
@@ -44,6 +46,7 @@ export const AuthProvider = ({ children }) => {
         const token = refreshed.data?.token;
         if (!token) throw new Error('Refresh response did not contain a token');
         localStorage.setItem('token', token);
+        if (refreshed.data?.refreshToken) localStorage.setItem('refreshToken', refreshed.data.refreshToken);
         originalRequest.headers = { ...(originalRequest.headers || {}), Authorization: `Bearer ${token}` };
         return instance(originalRequest);
       } catch (refreshError) {
@@ -57,6 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     let active = true;
+    const generationAtStart = authGeneration.current;
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
       if (!token) { if (active) setLoading(false); return; }
@@ -64,11 +68,19 @@ export const AuthProvider = ({ children }) => {
         const response = await api.get('/auth/me');
         const userData = response.data?.user;
         if (!userData || !SUPER_ADMIN_ROLES.has(userData.role)) throw new Error('Super Admin access required');
-        if (active) { setUser(userData); setIsAuthenticated(true); }
+        if (active && authGeneration.current === generationAtStart) {
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
       } catch (error) {
+        // A login/logout may have happened while the initial auth check was in flight.
+        // Never let the stale check erase a newer authenticated session.
+        if (!active || authGeneration.current !== generationAtStart) return;
         clearSession();
         if (error.message === 'Super Admin access required') toast.error('Access denied. Super Admin privileges are required.');
-      } finally { if (active) setLoading(false); }
+      } finally {
+        if (active && authGeneration.current === generationAtStart) setLoading(false);
+      }
     };
     checkAuth();
     return () => { active = false; };
@@ -86,10 +98,12 @@ export const AuthProvider = ({ children }) => {
         toast.error(message);
         return { success: false, error: message };
       }
+      authGeneration.current += 1;
       localStorage.setItem('token', data.token);
       if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
       setUser(authenticatedUser);
       setIsAuthenticated(true);
+      setLoading(false);
       toast.success('Signed in successfully.');
       return { success: true, user: authenticatedUser };
     } catch (error) {
