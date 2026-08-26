@@ -5,14 +5,13 @@ export const adminService = {
   getUserDetails: (userId) => api.get(`/admin/users/${userId}`).then(res => res.data),
   updateUserStatus: (userId, status) => api.put(`/admin/users/${userId}/status`, { status }).then(res => res.data),
   adjustUserBalance: (userId, amount, type) => api.post(`/admin/users/${userId}/balance`, { amount, type }).then(res => res.data),
-  deleteUser: (userId) => api.delete(`/admin/users/${userId}`).then(res => res.data),
+  deleteUser: (userId, reason = '') => api.delete(`/admin/users/${userId}/permanent`, { data: { reason } }).then(res => res.data),
 
-  // Provider catalogue: use the same club-scoped source as frontend-user.
   getGames: (params) => api.get('/games/available', { params }).then(res => ({ ...res.data, games: res.data?.games || res.data?.data?.games || [] })),
   addGame: (data) => api.post('/admin/games', data).then(res => res.data),
   updateGame: (gameId, data) => api.put(`/admin/games/${gameId}`, data).then(res => res.data),
-  updateGameRTP: (gameId, rtp) => api.put(`/admin/games/${gameId}/rtp`, { rtp }).then(res => res.data),
-  updateGameWinRate: (gameId, winRate) => api.put(`/admin/games/${gameId}/win-rate`, { winRate }).then(res => res.data),
+  updateGameRTP: (gameId, rtp) => api.put(`/admin/games/${gameId}/rtp`, { rtpAdjustment: rtp }).then(res => res.data),
+  updateGameWinRate: (gameId, winRate) => api.put(`/admin/games/${gameId}/win-rate`, { winRateAdjustment: winRate }).then(res => res.data),
   deleteGame: (gameId) => api.delete(`/admin/games/${gameId}`).then(res => res.data),
 
   getTransactions: (params) => api.get('/admin/transactions', { params }).then(res => res.data),
@@ -35,4 +34,5 @@ export const adminService = {
   resolveSupportTicket: (messageId) => api.put(`/admin/support/resolve/${messageId}`).then(res => res.data),
   getDashboardStats: () => api.get('/admin/dashboard/stats').then(res => res.data),
 };
+
 export default adminService;
