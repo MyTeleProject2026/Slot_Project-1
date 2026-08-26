@@ -4,9 +4,14 @@ export const DEFAULT_TIMEZONE = 'Asia/Yangon';
 
 export function formatCurrency(value, currency = DEFAULT_CURRENCY) {
   const amount = Number(value ?? 0);
-  return new Intl.NumberFormat('en-MM', {
+  return new Intl.NumberFormat('my-MM', {
     style: 'currency',
     currency,
+    currencyDisplay: 'code',
     maximumFractionDigits: currency === 'MMK' ? 0 : 2,
   }).format(Number.isFinite(amount) ? amount : 0);
+}
+
+export function formatMMK(value) {
+  return formatCurrency(value, DEFAULT_CURRENCY);
 }
