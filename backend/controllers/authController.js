@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
+const AdminBalance = require('../models/AdminBalance');
 const { generateToken, generateRefreshToken } = require('../config/auth');
 const { ROLES } = require('../config/roles');
 
@@ -28,9 +29,21 @@ function getVirtualAdminById(userId) {
     { id: 99993, role: ROLES.ADMIN, username: process.env.ADMIN_USERNAME },
     { id: 99994, role: ROLES.EMPLOYEE, username: process.env.EMPLOYEE_USERNAME },
   ];
-  const admin = virtualAdmins.find(a => a.id === userId);
+  const admin = virtualAdmins.find(a => a.id === Number(userId));
   if (!admin || !admin.username) return null;
   return { id: admin.id, username: admin.username, email: `${admin.username}@admin.local`, fullName: admin.role.replace('_', ' ').toUpperCase(), role: admin.role, status: 'active', isVirtual: true };
+}
+
+async function getAdminWallet(admin) {
+  const balance = await AdminBalance.findByAdminId(admin.id);
+  return {
+    main_balance: balance ? Number(balance.balance) : 0,
+    frozen_balance: balance ? Number(balance.frozen_balance) : 0,
+    bonus_balance: 0,
+    commission_balance: 0,
+    currency: 'MMK',
+    countryCode: 'MM',
+  };
 }
 
 function normalizePhone(phone) {
@@ -64,14 +77,13 @@ exports.login = async (req, res) => {
     const identifier = String(req.body.identifier ?? req.body.username ?? '').trim();
     const { password } = req.body;
     if (!identifier) return res.status(400).json({ success: false, error: 'Phone number or username is required' });
-
     const adminUser = getAdminFromEnv(identifier, password);
     if (adminUser) {
+      await AdminBalance.ensure(adminUser.id, adminUser.role);
       const token = generateToken(adminUser.id, adminUser.role);
       const refreshToken = generateRefreshToken(adminUser.id);
-      return res.json({ success: true, token, refreshToken, user: adminUser, wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 } });
+      return res.json({ success: true, token, refreshToken, user: adminUser, wallet: await getAdminWallet(adminUser) });
     }
-
     const normalizedPhone = normalizePhone(identifier);
     let user = await User.findByPhone(normalizedPhone);
     if (!user) user = await User.findByUsername(identifier);
@@ -98,9 +110,10 @@ exports.refreshToken = async (req, res) => {
     if (!decoded) return res.status(401).json({ success: false, error: 'Invalid refresh token' });
     const virtualAdmin = getVirtualAdminById(decoded.userId);
     if (virtualAdmin) {
+      await AdminBalance.ensure(virtualAdmin.id, virtualAdmin.role);
       const token = generateToken(virtualAdmin.id, virtualAdmin.role);
       const newRefresh = generateRefreshToken(virtualAdmin.id);
-      return res.json({ success: true, token, refreshToken: newRefresh, user: virtualAdmin, wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 } });
+      return res.json({ success: true, token, refreshToken: newRefresh, user: virtualAdmin, wallet: await getAdminWallet(virtualAdmin) });
     }
     const user = await User.findById(decoded.userId);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
@@ -116,7 +129,7 @@ exports.refreshToken = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const virtualAdmin = getVirtualAdminById(req.userId);
-    if (virtualAdmin) return res.json({ success: true, user: virtualAdmin, wallet: { main_balance: 0, bonus_balance: 0, commission_balance: 0 } });
+    if (virtualAdmin) return res.json({ success: true, user: virtualAdmin, wallet: await getAdminWallet(virtualAdmin) });
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     const wallet = await Wallet.findByUserId(req.userId);
