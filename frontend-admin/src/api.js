@@ -55,4 +55,8 @@ api.interceptors.response.use(
   }
 );
 
+export const integrationApi = {
+  status: () => api.get('/integration/status'),
+};
+
 export default api;
