@@ -14,8 +14,7 @@ class User {
   static async findById(id) {
     const [rows] = await pool.query(
       `SELECT id, username, email, full_name, phone, role, status, referral_code, created_at, last_login
-       FROM users WHERE id = ?`,
-      [id]
+       FROM users WHERE id = ?`, [id]
     );
     return rows[0];
   }
@@ -53,24 +52,52 @@ class User {
     }
     if (fields.length === 0) return false;
     values.push(id);
-    const [result] = await pool.query(
-      `UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`,
-      values
-    );
+    const [result] = await pool.query(`UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`, values);
     return result.affectedRows > 0;
   }
 
   static async updateLastLogin(id, ip) {
-    const [result] = await pool.query(
-      'UPDATE users SET last_login = NOW(), login_ip = ? WHERE id = ?',
-      [ip, id]
-    );
+    const [result] = await pool.query('UPDATE users SET last_login = NOW(), login_ip = ? WHERE id = ?', [ip, id]);
     return result.affectedRows > 0;
   }
 
   static async delete(id) {
     const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
     return result.affectedRows > 0;
+  }
+
+  // Permanently removes user-owned records before deleting the user row.
+  // Table names are obtained from information_schema, never from request input.
+  static async permanentlyDelete(id) {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [references] = await connection.query(
+        `SELECT DISTINCT TABLE_NAME, COLUMN_NAME
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND COLUMN_NAME = 'user_id'
+           AND TABLE_NAME <> 'users'`
+      );
+
+      for (const ref of references) {
+        const table = String(ref.TABLE_NAME).replace(/`/g, '');
+        const column = String(ref.COLUMN_NAME).replace(/`/g, '');
+        await connection.query(`DELETE FROM \`${table}\` WHERE \`${column}\` = ?`, [id]);
+      }
+
+      const [result] = await connection.query('DELETE FROM users WHERE id = ?', [id]);
+      if (!result.affectedRows) {
+        throw new Error('User not found');
+      }
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   static async getAll(filters = {}) {
