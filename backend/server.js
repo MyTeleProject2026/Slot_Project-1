@@ -22,6 +22,7 @@ const promotionRoutes = require('./routes/promotions');
 const settingsRoutes = require('./routes/settings');
 const paymentProviderRoutes = require('./routes/paymentProviders');
 const slotopolFundingRoutes = require('./routes/slotopolFunding');
+const integrationRoutes = require('./routes/integration');
 
 const app = express();
 const httpServer = createServer(app);
@@ -49,6 +50,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/super-admin/payment-providers', paymentProviderRoutes);
 app.use('/api/slotopol-funding', slotopolFundingRoutes);
+app.use('/api/integration', integrationRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server is running', timestamp: new Date().toISOString(), uptime: process.uptime() }));
 app.use((req, res) => res.status(404).json({ success: false, error: 'API endpoint not found', code: '404' }));
 app.use((err, req, res, next) => { console.error('Global error handler:', err); res.status(err.status || 500).json({ success: false, error: err.message || 'Internal server error', code: err.code || '500' }); });
