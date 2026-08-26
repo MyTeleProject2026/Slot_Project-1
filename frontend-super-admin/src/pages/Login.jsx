@@ -1,115 +1,96 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaUserShield, FaLock, FaArrowRight } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
-import toast from 'react-hot-toast';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [form, setForm] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: '' }));
+    setSubmitError('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    if (!form.username) newErrors.username = 'Username is required';
-    if (!form.password) newErrors.password = 'Password is required';
-    if (Object.keys(newErrors).length) { setErrors(newErrors); return; }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const nextErrors = {};
+    if (!form.username.trim()) nextErrors.username = 'Username is required.';
+    if (!form.password) nextErrors.password = 'Password is required.';
+    if (Object.keys(nextErrors).length) { setErrors(nextErrors); return; }
 
     setLoading(true);
+    setSubmitError('');
     try {
-      const result = await login(form.username, form.password);
+      const result = await login(form.username.trim(), form.password);
       if (result?.success) {
-        navigate('/dashboard');
+        const destination = location.state?.from?.pathname || '/dashboard';
+        navigate(destination, { replace: true });
+      } else if (result?.error) {
+        setSubmitError(result.error);
       }
     } catch (error) {
-      // Error handled in context
+      setSubmitError(error?.message || 'Unable to sign in. Please check your credentials or server connection.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-dark-950">
-      <motion.div
-        className="w-full max-w-md"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold gradient-text">Super Admin</h1>
-          <p className="text-gray-400 text-sm mt-1">Control Panel</p>
+    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4 py-8 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(245,158,11,.16),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(249,115,22,.10),transparent_35%)]" aria-hidden="true" />
+      <motion.section className="relative w-full max-w-md" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }}>
+        <div className="text-center mb-7">
+          <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-900/30">
+            <FaUserShield className="text-2xl text-slate-950" />
+          </div>
+          <p className="text-xs uppercase tracking-[.28em] text-amber-400 font-semibold">N999Bet</p>
+          <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight">Super Admin</h1>
+          <p className="mt-2 text-sm text-slate-400">Secure control panel access</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-dark-700/50 shadow-2xl space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Username</label>
-            <div className="relative">
-              <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                name="username"
-                value={form.username}
-                onChange={handleChange}
-                placeholder="Enter username"
-                className={`w-full pl-10 pr-4 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
-                  errors.username ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
-                }`}
-              />
+        <form onSubmit={handleSubmit} noValidate className="rounded-3xl border border-white/10 bg-slate-900/90 backdrop-blur-xl p-5 sm:p-7 shadow-2xl shadow-black/30">
+          <div className="space-y-5">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-slate-200 mb-2">Username</label>
+              <div className="relative">
+                <FaUserShield className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true" />
+                <input id="username" name="username" type="text" autoComplete="username" value={form.username} onChange={handleChange} aria-invalid={Boolean(errors.username)} aria-describedby={errors.username ? 'username-error' : undefined} placeholder="Enter your admin username" className={`w-full rounded-xl border bg-slate-950/70 py-3.5 pl-11 pr-4 text-white outline-none transition focus:ring-2 ${errors.username ? 'border-red-500 focus:ring-red-500/20' : 'border-white/10 focus:border-amber-400 focus:ring-amber-400/15'}`} />
+              </div>
+              {errors.username && <p id="username-error" className="mt-1.5 text-xs text-red-400">{errors.username}</p>}
             </div>
-            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
-            <div className="relative">
-              <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Enter password"
-                className={`w-full pl-10 pr-12 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${
-                  errors.password ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-200 mb-2">Password</label>
+              <div className="relative">
+                <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" aria-hidden="true" />
+                <input id="password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={form.password} onChange={handleChange} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? 'password-error' : undefined} placeholder="Enter your password" className={`w-full rounded-xl border bg-slate-950/70 py-3.5 pl-11 pr-12 text-white outline-none transition focus:ring-2 ${errors.password ? 'border-red-500 focus:ring-red-500/20' : 'border-white/10 focus:border-amber-400 focus:ring-amber-400/15'}`} />
+                <button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-amber-400/40">
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              {errors.password && <p id="password-error" className="mt-1.5 text-xs text-red-400">{errors.password}</p>}
             </div>
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 font-bold rounded-xl hover:shadow-lg hover:shadow-primary-500/25 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <><span className="w-5 h-5 border-2 border-dark-900/30 border-t-dark-900 rounded-full animate-spin"></span> Signing in...</>
-            ) : (
-              'Sign In'
-            )}
-          </button>
+            {submitError && <div role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{submitError}</div>}
+
+            <button type="submit" disabled={loading} className="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-3.5 font-bold text-slate-950 shadow-lg shadow-orange-900/20 transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2">
+              {loading ? <><span className="h-5 w-5 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" /> Signing in…</> : <>Sign in <FaArrowRight className="text-sm" /></>}
+            </button>
+          </div>
         </form>
-      </motion.div>
-    </div>
+        <p className="mt-6 text-center text-xs text-slate-500">Authorized personnel only · N999Bet Administration</p>
+      </motion.section>
+    </main>
   );
 };
 
