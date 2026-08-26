@@ -5,33 +5,84 @@ const AdminBalance = require('../models/AdminBalance');
 const { generateToken, generateRefreshToken } = require('../config/auth');
 const { ROLES } = require('../config/roles');
 
-function getAdminFromEnv(username, password) {
-  const adminConfigs = [
-    { envUser: 'SUPER_ADMIN_USERNAME', envPass: 'SUPER_ADMIN_PASSWORD', role: ROLES.SUPER_ADMIN, id: 99991 },
-    { envUser: 'MAIN_ADMIN_USERNAME', envPass: 'MAIN_ADMIN_PASSWORD', role: ROLES.MAIN_ADMIN, id: 99992 },
-    { envUser: 'ADMIN_USERNAME', envPass: 'ADMIN_PASSWORD', role: ROLES.ADMIN, id: 99993 },
-    { envUser: 'EMPLOYEE_USERNAME', envPass: 'EMPLOYEE_PASSWORD', role: ROLES.EMPLOYEE, id: 99994 },
+function firstEnv(names) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();
+  }
+  return '';
+}
+
+function adminEnvironmentConfig() {
+  return [
+    {
+      username: ['SUPER_ADMIN_USERNAME', 'SUPERADMIN_USERNAME', 'N999BET_SUPER_ADMIN_USERNAME', 'N999BET_SUPERADMIN_USERNAME', 'N999BET_SUPER_ADMIN_USER'],
+      password: ['SUPER_ADMIN_PASSWORD', 'SUPERADMIN_PASSWORD', 'N999BET_SUPER_ADMIN_PASSWORD', 'N999BET_SUPERADMIN_PASSWORD', 'N999BET_SUPER_ADMIN_PASS'],
+      role: ROLES.SUPER_ADMIN,
+      id: 99991,
+    },
+    {
+      username: ['MAIN_ADMIN_USERNAME', 'MAINADMIN_USERNAME', 'N999BET_MAIN_ADMIN_USERNAME'],
+      password: ['MAIN_ADMIN_PASSWORD', 'MAINADMIN_PASSWORD', 'N999BET_MAIN_ADMIN_PASSWORD'],
+      role: ROLES.MAIN_ADMIN,
+      id: 99992,
+    },
+    {
+      username: ['ADMIN_USERNAME', 'N999BET_ADMIN_USERNAME'],
+      password: ['ADMIN_PASSWORD', 'N999BET_ADMIN_PASSWORD'],
+      role: ROLES.ADMIN,
+      id: 99993,
+    },
+    {
+      username: ['EMPLOYEE_USERNAME', 'N999BET_EMPLOYEE_USERNAME'],
+      password: ['EMPLOYEE_PASSWORD', 'N999BET_EMPLOYEE_PASSWORD'],
+      role: ROLES.EMPLOYEE,
+      id: 99994,
+    },
   ];
-  for (const config of adminConfigs) {
-    const envUser = process.env[config.envUser];
-    const envPass = process.env[config.envPass];
-    if (envUser && username === envUser && password === envPass) {
-      return { id: config.id, username: envUser, email: `${envUser}@admin.local`, fullName: config.role.replace('_', ' ').toUpperCase(), role: config.role, status: 'active', isVirtual: true };
-    }
+}
+
+function getAdminFromEnv(username, password) {
+  const normalizedUsername = String(username || '').trim().toLowerCase();
+  const suppliedPassword = String(password ?? '');
+  for (const config of adminEnvironmentConfig()) {
+    const envUser = firstEnv(config.username);
+    const envPass = firstEnv(config.password);
+    if (!envUser || !envPass || envUser.toLowerCase() !== normalizedUsername) continue;
+
+    // Permit either a normal Render secret or a bcrypt password hash.
+    const passwordMatches = envPass.startsWith('$2a$') || envPass.startsWith('$2b$') || envPass.startsWith('$2y$')
+      ? bcrypt.compareSync(suppliedPassword, envPass)
+      : suppliedPassword === envPass;
+    if (!passwordMatches) return null;
+
+    return {
+      id: config.id,
+      username: envUser,
+      email: `${envUser}@admin.local`,
+      fullName: config.role.replace('_', ' ').toUpperCase(),
+      role: config.role,
+      status: 'active',
+      isVirtual: true,
+    };
   }
   return null;
 }
 
 function getVirtualAdminById(userId) {
-  const virtualAdmins = [
-    { id: 99991, role: ROLES.SUPER_ADMIN, username: process.env.SUPER_ADMIN_USERNAME },
-    { id: 99992, role: ROLES.MAIN_ADMIN, username: process.env.MAIN_ADMIN_USERNAME },
-    { id: 99993, role: ROLES.ADMIN, username: process.env.ADMIN_USERNAME },
-    { id: 99994, role: ROLES.EMPLOYEE, username: process.env.EMPLOYEE_USERNAME },
-  ];
-  const admin = virtualAdmins.find(a => a.id === Number(userId));
-  if (!admin || !admin.username) return null;
-  return { id: admin.id, username: admin.username, email: `${admin.username}@admin.local`, fullName: admin.role.replace('_', ' ').toUpperCase(), role: admin.role, status: 'active', isVirtual: true };
+  const configs = adminEnvironmentConfig();
+  const config = configs.find(item => item.id === Number(userId));
+  const username = config ? firstEnv(config.username) : '';
+  if (!config || !username) return null;
+  return {
+    id: config.id,
+    username,
+    email: `${username}@admin.local`,
+    fullName: config.role.replace('_', ' ').toUpperCase(),
+    role: config.role,
+    status: 'active',
+    isVirtual: true,
+  };
 }
 
 async function getAdminWallet(admin) {
@@ -77,6 +128,7 @@ exports.login = async (req, res) => {
     const identifier = String(req.body.identifier ?? req.body.username ?? '').trim();
     const { password } = req.body;
     if (!identifier) return res.status(400).json({ success: false, error: 'Phone number or username is required' });
+
     const adminUser = getAdminFromEnv(identifier, password);
     if (adminUser) {
       await AdminBalance.ensure(adminUser.id, adminUser.role);
@@ -84,6 +136,7 @@ exports.login = async (req, res) => {
       const refreshToken = generateRefreshToken(adminUser.id);
       return res.json({ success: true, token, refreshToken, user: adminUser, wallet: await getAdminWallet(adminUser) });
     }
+
     const normalizedPhone = normalizePhone(identifier);
     let user = await User.findByPhone(normalizedPhone);
     if (!user) user = await User.findByUsername(identifier);
