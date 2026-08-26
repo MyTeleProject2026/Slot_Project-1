@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const permanentUserController = require('../controllers/permanentUserController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
 
@@ -11,7 +12,7 @@ router.get('/users', adminController.getUsers);
 router.get('/users/:id', adminController.getUserDetails);
 router.put('/users/:id/status', adminController.updateUserStatus);
 router.delete('/users/:id', adminController.deleteUser);
-router.delete('/users/:id/permanent', adminController.permanentlyDeleteUser);
+router.delete('/users/:id/permanent', permanentUserController.deleteUserPermanently);
 router.post('/users/:id/balance', adminController.adjustUserBalance);
 
 router.get('/transactions', adminController.getTransactions);
