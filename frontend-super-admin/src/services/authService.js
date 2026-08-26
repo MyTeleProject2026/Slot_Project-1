@@ -1,15 +1,14 @@
 import api from './api';
 
-const normalize = (data = {}) => ({
-  ...data,
-  token: data.access || data.token,
-  refreshToken: data.refrsh || data.refreshToken,
-});
+const unwrap = (response) => response?.data?.data || response?.data || {};
 
 export const authService = {
-  login: (credentials) => api.post('/signin', { email: credentials.email || credentials.username, secret: credentials.secret || credentials.password }).then(res => normalize(res.data)),
-  refresh: (refreshToken) => api.post('/refresh', {}, { headers: { Authorization: `Bearer ${refreshToken}` } }).then(res => normalize(res.data)),
-  getMe: () => api.get('/auth/me').then(res => res.data),
+  login: ({ identifier, email, username, password }) => {
+    const value = identifier || email || username;
+    return api.post('/auth/login', { identifier: value, password }).then((res) => unwrap(res));
+  },
+  refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }).then((res) => unwrap(res)),
+  getMe: () => api.get('/auth/me').then((res) => unwrap(res)),
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
