@@ -6,8 +6,8 @@ const { ROLES } = require('../config/roles');
 
 router.get('/', promotionController.getActivePromotions);
 router.get('/featured', promotionController.getFeaturedPromotions);
+router.get('/admin/all', authenticate, authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), promotionController.getAllPromotions);
 router.get('/:id', promotionController.getPromotionById);
-
 router.post('/', authenticate, authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), promotionController.createPromotion);
 router.put('/:id', authenticate, authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), promotionController.updatePromotion);
 router.delete('/:id', authenticate, authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), promotionController.deletePromotion);

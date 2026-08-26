@@ -21,6 +21,7 @@ const chatRoutes = require('./routes/chat');
 const promotionRoutes = require('./routes/promotions');
 const settingsRoutes = require('./routes/settings');
 const paymentProviderRoutes = require('./routes/paymentProviders');
+const slotopolFundingRoutes = require('./routes/slotopolFunding');
 
 const app = express();
 const httpServer = createServer(app);
@@ -47,39 +48,28 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/super-admin/payment-providers', paymentProviderRoutes);
+app.use('/api/slotopol-funding', slotopolFundingRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server is running', timestamp: new Date().toISOString(), uptime: process.uptime() }));
 app.use((req, res) => res.status(404).json({ success: false, error: 'API endpoint not found', code: '404' }));
 app.use((err, req, res, next) => { console.error('Global error handler:', err); res.status(err.status || 500).json({ success: false, error: err.message || 'Internal server error', code: err.code || '500' }); });
-
-io.on('connection', (socket) => {
-  socket.on('join-chat', (userId) => socket.join(`user-${userId}`));
-  socket.on('join-admin', (adminId) => socket.join(`admin-${adminId}`));
-  socket.on('send-message', async (data) => {
-    try {
-      const { userId, adminId, message, fromUser } = data;
-      const [result] = await pool.query('INSERT INTO chat_messages (user_id, admin_id, message, is_from_user) VALUES (?, ?, ?, ?)', [userId, adminId, message, fromUser]);
-      const [rows] = await pool.query('SELECT * FROM chat_messages WHERE id = ?', [result.insertId]);
-      const newMessage = rows[0];
-      if (fromUser) io.to(`admin-${adminId}`).emit('new-message', newMessage); else io.to(`user-${userId}`).emit('new-message', newMessage);
-      socket.emit('message-sent', newMessage);
-    } catch (error) { console.error('Chat error:', error); socket.emit('message-error', { error: 'Failed to send message' }); }
-  });
-});
-
+io.on('connection', (socket) => { socket.on('join-chat', (userId) => socket.join(`user-${userId}`)); socket.on('join-admin', (adminId) => socket.join(`admin-${adminId}`)); socket.on('send-message', async (data) => { try { const { userId, adminId, message, fromUser } = data; const [result] = await pool.query('INSERT INTO chat_messages (user_id, admin_id, message, is_from_user) VALUES (?, ?, ?, ?)', [userId, adminId, message, fromUser]); const [rows] = await pool.query('SELECT * FROM chat_messages WHERE id = ?', [result.insertId]); const newMessage = rows[0]; if (fromUser) io.to(`admin-${adminId}`).emit('new-message', newMessage); else io.to(`user-${userId}`).emit('new-message', newMessage); socket.emit('message-sent', newMessage); } catch (error) { console.error('Chat error:', error); socket.emit('message-error', { error: 'Failed to send message' }); } }); });
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on port ${PORT}`));
-
-(async () => {
-  try {
-    const GameMetadata = require('./models/GameMetadata');
-    const SlotopolPlayer = require('./models/SlotopolPlayer');
-    await GameMetadata.initTable();
-    await SlotopolPlayer.initTable();
-    await pool.query(`CREATE TABLE IF NOT EXISTS payment_providers (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(64) NOT NULL UNIQUE, type VARCHAR(32) NOT NULL, name VARCHAR(128) NOT NULL, currency VARCHAR(16) NOT NULL DEFAULT 'MMK', config JSON NULL, enabled TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
-    console.log('✅ Database tables initialized successfully');
-  } catch (error) {
-    console.error('❌ Database initialization warning:', error.message);
-  }
-})();
-
+(async () => { try {
+  const GameMetadata = require('./models/GameMetadata'); const SlotopolPlayer = require('./models/SlotopolPlayer');
+  await GameMetadata.initTable(); await SlotopolPlayer.initTable();
+  await pool.query(`CREATE TABLE IF NOT EXISTS payment_providers (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(64) NOT NULL UNIQUE, type VARCHAR(32) NOT NULL, name VARCHAR(128) NOT NULL, currency VARCHAR(16) NOT NULL DEFAULT 'MMK', config JSON NULL, enabled TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS slotopol_funding_ledger (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, transfer_id VARCHAR(128) NOT NULL UNIQUE, recipient_admin_id BIGINT UNSIGNED NOT NULL, amount DECIMAL(24,2) NOT NULL, currency VARCHAR(16) NOT NULL DEFAULT 'MMK', country_code VARCHAR(8) NOT NULL DEFAULT 'MM', description VARCHAR(500) NULL, status VARCHAR(32) NOT NULL DEFAULT 'completed', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, INDEX idx_slotopol_funding_recipient (recipient_admin_id), INDEX idx_slotopol_funding_created (created_at))`);
+  const alterStatements = [
+    "ALTER TABLE promotions ADD COLUMN country_code VARCHAR(8) NOT NULL DEFAULT 'MM'",
+    "ALTER TABLE promotions ADD COLUMN currency VARCHAR(16) NOT NULL DEFAULT 'MMK'",
+    "ALTER TABLE promotions ADD COLUMN language VARCHAR(16) NOT NULL DEFAULT 'my'",
+    "ALTER TABLE promotions ADD COLUMN title_my TEXT NULL",
+    "ALTER TABLE promotions ADD COLUMN description_my TEXT NULL",
+    "ALTER TABLE promotions ADD COLUMN terms_my TEXT NULL"
+  ];
+  for (const sql of alterStatements) { try { await pool.query(sql); } catch (e) { if (!/duplicate column|already exists/i.test(e.message)) console.warn('Promotion schema migration warning:', e.message); } }
+  await pool.query("UPDATE promotions SET country_code='MM', currency='MMK', language='my' WHERE country_code IS NULL OR country_code='' OR currency IS NULL OR currency=''");
+  console.log('✅ Database tables initialized successfully');
+} catch (error) { console.error('❌ Database initialization warning:', error.message); } })();
 module.exports = { app, io, httpServer };

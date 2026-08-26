@@ -8,6 +8,7 @@ const superAdminApi = {
   getBalance: () => api.get('/super-admin/balance'),
   addBalance: (payload) => api.post('/super-admin/balance/add', payload),
   transferBalance: (payload) => api.post('/super-admin/balance/transfer', payload),
+  getFundingHistory: () => api.get('/slotopol-funding/history'),
   getSettings: () => api.get('/super-admin/settings'),
   updateSettings: (payload) => api.put('/super-admin/settings', payload),
   updateGameSettings: (payload) => api.put('/super-admin/games/settings', payload),
