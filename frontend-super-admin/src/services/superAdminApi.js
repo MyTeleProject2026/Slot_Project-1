@@ -17,6 +17,7 @@ const superAdminApi = {
   createPaymentProvider: (payload) => api.post('/super-admin/payment-providers', payload),
   updatePaymentProvider: (id, payload) => api.put(`/super-admin/payment-providers/${id}`, payload),
   deletePaymentProvider: (id) => api.delete(`/super-admin/payment-providers/${id}`),
+  getIntegrationStatus: () => api.get('/integration/status'),
 };
 
 export default superAdminApi;
