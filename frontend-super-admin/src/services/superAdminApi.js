@@ -6,6 +6,7 @@ const superAdminApi = {
   updateAdmin: (id, payload) => api.put(`/super-admin/admins/${id}`, payload),
   deleteAdmin: (id) => api.delete(`/super-admin/admins/${id}`),
   getBalance: () => api.get('/super-admin/balance'),
+  getMasterBalance: () => api.get('/slotopol-funding/balance'),
   addBalance: (payload) => api.post('/super-admin/balance/add', payload),
   transferBalance: (payload) => api.post('/super-admin/balance/transfer', payload),
   getFundingHistory: () => api.get('/slotopol-funding/history'),
