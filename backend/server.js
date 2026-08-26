@@ -20,6 +20,7 @@ const employeeRoutes = require('./routes/employee');
 const chatRoutes = require('./routes/chat');
 const promotionRoutes = require('./routes/promotions');
 const settingsRoutes = require('./routes/settings');
+const paymentProviderRoutes = require('./routes/paymentProviders');
 
 const app = express();
 const httpServer = createServer(app);
@@ -45,6 +46,7 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/super-admin/payment-providers', paymentProviderRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server is running', timestamp: new Date().toISOString(), uptime: process.uptime() }));
 app.use((req, res) => res.status(404).json({ success: false, error: 'API endpoint not found', code: '404' }));
 app.use((err, req, res, next) => { console.error('Global error handler:', err); res.status(err.status || 500).json({ success: false, error: err.message || 'Internal server error', code: err.code || '500' }); });
@@ -73,7 +75,8 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on por
     const SlotopolPlayer = require('./models/SlotopolPlayer');
     await GameMetadata.initTable();
     await SlotopolPlayer.initTable();
-    console.log('✅ GameMetadata and SlotopolPlayer tables initialized successfully');
+    await pool.query(`CREATE TABLE IF NOT EXISTS payment_providers (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(64) NOT NULL UNIQUE, type VARCHAR(32) NOT NULL, name VARCHAR(128) NOT NULL, currency VARCHAR(16) NOT NULL DEFAULT 'MMK', config JSON NULL, enabled TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
+    console.log('✅ Database tables initialized successfully');
   } catch (error) {
     console.error('❌ Database initialization warning:', error.message);
   }
