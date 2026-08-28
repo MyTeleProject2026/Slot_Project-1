@@ -14,6 +14,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     { key: 'owner', title: 'OWNER', items: [
       { label: 'Command Center', path: '/control-center', icon: FaShieldAlt },
       { label: 'Dashboard', path: '/dashboard', icon: FaTachometerAlt },
+      { label: 'Master Assets', path: '/master-assets', icon: FaWallet },
     ] },
     { key: 'operations', title: 'OPERATIONS', children: [
       { label: 'Players & Accounts', path: '/users' },
