@@ -13,6 +13,15 @@ function idOf(value) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+router.get('/summary', async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT type, status, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM user_transactions WHERE type IN ('deposit','withdraw') GROUP BY type,status");
+    const summary={deposit:{pending:{count:0,total:0},completed:{count:0,total:0},rejected:{count:0,total:0}},withdraw:{pending:{count:0,total:0},completed:{count:0,total:0},rejected:{count:0,total:0}}};
+    rows.forEach(r=>{ if(summary[r.type] && summary[r.type][r.status]) summary[r.type][r.status]={count:Number(r.count),total:Number(r.total)}; });
+    res.json({success:true,summary});
+  } catch(error){ console.error('Transaction summary error:',error); res.status(500).json({success:false,error:'Failed to fetch transaction summary'}); }
+});
+
 router.get('/pending', async (req, res) => {
   try {
     const type = String(req.query.type || '').trim().toLowerCase();
