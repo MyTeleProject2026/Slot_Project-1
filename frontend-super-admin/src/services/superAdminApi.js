@@ -23,6 +23,7 @@ const superAdminApi = {
   addBalance: (payload) => unwrap(api.post('/super-admin/balance/add', payload)),
   transferBalance: (payload) => unwrap(api.post('/super-admin/balance/transfer', payload)),
   getFundingHistory: (params = {}) => unwrap(api.get('/slotopol-funding/history', { params })),
+  getSettlementSummary: () => unwrap(api.get('/super-admin/transactions/summary')),
   getBalanceOverview: () => unwrap(api.get('/main-admin/balance/overview')),
   addBalanceToSuperAdmin: (payload) => unwrap(api.post('/main-admin/balance/add-to-super-admin', payload)),
   addBalanceToAdmin: (payload) => unwrap(api.post('/main-admin/balance/add-to-admin', payload)),
