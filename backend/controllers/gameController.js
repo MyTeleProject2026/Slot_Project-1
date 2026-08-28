@@ -34,7 +34,7 @@ exports.startGame = async (req,res) => {
     if(!userId) return res.status(401).json({success:false,error:'Unauthorized'});
     if(typeof gameId!=='string'||!gameId.includes('/')) return res.status(400).json({success:false,error:'Invalid game ID'});
     let userRows; try { [userRows]=await pool.query('SELECT id, username, phone, status, club_id FROM users WHERE id = ?',[userId]); } catch { [userRows]=await pool.query('SELECT id, username, phone, status FROM users WHERE id = ?',[userId]); userRows=userRows.map(row=>({...row,club_id:1})); }
-    if(!userRows.length) return res.status(404).json({success:false,error:'User not found'}); if(userRows[0].status&&userRows[0].status!=='active') return res.status(403).json({success:false,error:'User account is not active'});
+    if(!userRows.length) return res.status(404).json({success:false,error:'User not found'}); if(userRows[0].status&&userRows[0].status!=='active') return res.status(403).json({success:false,error:'User account is not active'}); 
     const clubId=Number(userRows[0].club_id||process.env.N999BET_SLOTOPOL_CLUB_ID||1); const requestedBet=Number(betAmount||1); const requestedLines=Number(selectedLines||20);
     if(!Number.isFinite(requestedBet)||requestedBet<=0) return res.status(400).json({success:false,error:'Invalid bet amount'});
     const wallet=await Wallet.findByUserId(userId); if(!wallet) return res.status(404).json({success:false,error:'Wallet not found'}); if(Number(wallet.main_balance)<requestedBet) return res.status(409).json({success:false,error:'Insufficient balance'});
@@ -54,11 +54,13 @@ exports.spin = async (req,res) => {
     const state=typeof session.state==='string'?JSON.parse(session.state||'{}'):(session.state||{}); const pendingGain=Number(state.pendingGain||0);
     if(pendingGain>0&&!state.settledGain) return res.status(409).json({success:false,error:'Collect or double-up the pending win before starting another spin',code:'PENDING_GAIN_NOT_SETTLED'});
     const bet=Number(betAmount||session.bet_amount); if(!Number.isFinite(bet)||bet<=0) return res.status(400).json({success:false,error:'Invalid bet amount'});
-    const wallet=await Wallet.findByUserId(userId); if(!wallet||Number(wallet.main_balance)<bet) return res.status(409).json({success:false,error:'Insufficient balance'});
-    const slotopolUid=Number(state.slotopolUid||session.slotopol_uid); if(!Number.isInteger(slotopolUid)||slotopolUid<=0) return res.status(409).json({success:false,error:'Slotopol player identity is missing',code:'SLOTOPOL_UID_MISSING'});
-    await slotopolService.syncPlayerWallet(session.club_id,slotopolUid,Number(wallet.main_balance));
-    const [debit]=await pool.query('UPDATE wallets SET main_balance = main_balance - ? WHERE user_id = ? AND main_balance >= ?',[bet,userId,bet]);
-    if(!debit.affectedRows) return res.status(409).json({success:false,error:'Insufficient balance'});
+    const wallet=await Wallet.findByUserId(userId); if(!wallet) return res.status(404).json({success:false,error:'Wallet not found'});
+    // Use the atomic debit as the final balance check so concurrent requests
+    // cannot spend the same available balance twice.
+    const debited=await Wallet.debitMainBalance(userId,bet);
+    if(!debited) return res.status(409).json({success:false,error:'Insufficient balance'});
+    const slotopolUid=Number(state.slotopolUid||session.slotopol_uid); if(!Number.isInteger(slotopolUid)||slotopolUid<=0){ await Wallet.updateBalance(userId,'main',bet); return res.status(409).json({success:false,error:'Slotopol player identity is missing',code:'SLOTOPOL_UID_MISSING'}); }
+    await slotopolService.syncPlayerWallet(session.club_id,slotopolUid,Number(wallet.main_balance)-bet);
     let spinResult;
     try { spinResult=await slotopolService.spin(session.slotopol_game_id,bet,Number(selectedLines||session.selected_lines)); }
     catch(error){ try { await Wallet.updateBalance(userId,'main',bet); } catch(refundError){ console.error('Spin compensation refund failed:',refundError); } throw error; }
