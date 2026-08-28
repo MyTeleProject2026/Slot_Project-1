@@ -20,6 +20,7 @@ class ErrorBoundary extends Component {
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ControlCenter = lazy(() => import('./pages/ControlCenter'));
+const MasterAssets = lazy(() => import('./pages/MasterAssets'));
 const UserList = lazy(() => import('./pages/Users/UserList'));
 const UserDetails = lazy(() => import('./pages/Users/UserDetails'));
 const GameList = lazy(() => import('./pages/Games/GameList'));
@@ -58,6 +59,7 @@ function App() {
       <Route path="/" element={<Dashboard />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/control-center" element={<ControlCenter />} />
+      <Route path="/master-assets" element={<MasterAssets />} />
       <Route path="/users" element={<UserList />} /><Route path="/users/:id" element={<UserDetails />} />
       <Route path="/games" element={<GameList />} /><Route path="/games/add" element={<GameAdd />} /><Route path="/games/:id/edit" element={<GameEdit />} /><Route path="/games/:id/control" element={<GameControl />} />
       <Route path="/transactions" element={<TransactionList />} /><Route path="/transactions/deposits" element={<DepositApproval />} /><Route path="/transactions/withdrawals" element={<WithdrawApproval />} />
