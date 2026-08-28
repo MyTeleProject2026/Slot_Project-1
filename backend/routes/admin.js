@@ -29,8 +29,6 @@ router.get('/games/:id', adminController.getGameById);
 router.post('/games', adminController.createGame);
 router.put('/games/:id', adminController.updateGame);
 router.delete('/games/:id', adminController.deleteGame);
-router.put('/games/:id/rtp', adminController.adjustGameRTP);
-router.put('/games/:id/win-rate', adminController.adjustWinRate);
 
 router.get('/banners', adminController.getBanners);
 router.post('/banners', adminController.createBanner);
