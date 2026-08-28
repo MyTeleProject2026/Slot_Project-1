@@ -4,7 +4,7 @@ import slotAudio from '../../services/slotAudio';
 
 const number = (v) => Number(v || 0);
 
-export default function GameFeatureOverlay({ result = {}, onCollect, onDoubleUp, busy = false }) {
+export default function GameFeatureOverlay({ result = {}, onCollect, onDoubleUp, onContinue, busy = false }) {
   const fs = number(result.fs ?? result.freeSpins ?? result.free_spins);
   const gain = number(result.gain ?? result.win);
   const multiplier = number(result.multiplier ?? result.mult ?? result.x);
@@ -12,7 +12,13 @@ export default function GameFeatureOverlay({ result = {}, onCollect, onDoubleUp,
   const bonus = Boolean(result.bonus ?? result.bonusTriggered ?? result.feature);
   const doubleAvailable = Boolean(result.doubleUpAvailable ?? result.doubleup ?? gain > 0);
 
-  useEffect(() => { if (fs > 0) slotAudio.freeSpins(); else if (gain >= 20) slotAudio.bigWin(); else if (gain > 0) slotAudio.win(gain); }, [fs, gain]);
+  useEffect(() => {
+    if (fs > 0) slotAudio.freeSpins();
+    else if (gain >= 20) slotAudio.bigWin();
+    else if (gain > 0) slotAudio.win(gain);
+  }, [fs, gain]);
+
+  const canContinue = fs > 0 && typeof onContinue === 'function' && !busy;
 
   return <AnimatePresence>
     {(fs > 0 || bonus || multiplier > 1 || cascades > 0 || gain > 0) && <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center p-4">
@@ -26,9 +32,9 @@ export default function GameFeatureOverlay({ result = {}, onCollect, onDoubleUp,
           {multiplier > 1 && <motion.p initial={{ scale: .5 }} animate={{ scale: [1,1.2,1] }} transition={{ duration: .55 }} className="mt-3 text-4xl font-black text-emerald-300">×{multiplier}</motion.p>}
           {gain > 0 && <><p className="mt-4 text-xs uppercase tracking-[.25em] text-slate-400">current win</p><p className="mt-1 text-4xl font-black text-amber-100">{gain.toLocaleString()}</p></>}
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
-            {gain > 0 && <button disabled={busy} onClick={onCollect} className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy ? 'WORKING…' : 'COLLECT'}</button>}
-            {gain > 0 && doubleAvailable && <button disabled={busy} onClick={onDoubleUp} className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/15 px-4 py-3 text-sm font-black text-fuchsia-100 disabled:opacity-50">DOUBLE UP ×2</button>}
-            {gain <= 0 && fs > 0 && <button onClick={() => {}} className="rounded-2xl bg-indigo-500 px-4 py-3 text-sm font-black text-white sm:col-span-2">CONTINUE</button>}
+            {gain > 0 && <button disabled={busy || typeof onCollect !== 'function'} onClick={onCollect} className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy ? 'WORKING…' : 'COLLECT'}</button>}
+            {gain > 0 && doubleAvailable && <button disabled={busy || typeof onDoubleUp !== 'function'} onClick={onDoubleUp} className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/15 px-4 py-3 text-sm font-black text-fuchsia-100 disabled:opacity-50">DOUBLE UP ×2</button>}
+            {canContinue && <button onClick={onContinue} className="rounded-2xl bg-indigo-500 px-4 py-3 text-sm font-black text-white sm:col-span-2">CONTINUE</button>}
           </div>
         </div>
       </motion.div>
