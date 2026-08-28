@@ -16,6 +16,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       { label: 'Dashboard', path: '/dashboard', icon: FaTachometerAlt },
       { label: 'Master Assets', path: '/master-assets', icon: FaWallet },
       { label: 'Admin Management', path: '/admin-management', icon: FaUsersCog },
+      { label: 'Settlement Center', path: '/settlement-center', icon: FaMoneyBillWave },
     ] },
     { key: 'operations', title: 'OPERATIONS', children: [
       { label: 'Players & Accounts', path: '/users' },
