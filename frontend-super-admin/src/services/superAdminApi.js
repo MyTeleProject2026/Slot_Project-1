@@ -40,8 +40,10 @@ const superAdminApi = {
   deleteUser: (id, reason = '') => unwrap(api.delete(`/admin/users/${id}`, { data: { reason } })),
 
   getTransactions: (params) => unwrap(api.get('/admin/transactions', { params })),
-  approveTransaction: (id) => unwrap(api.put(`/admin/transactions/${id}/approve`)),
-  rejectTransaction: (id, reason = '') => unwrap(api.put(`/admin/transactions/${id}/reject`, { reason })),
+  getPendingTransactions: (type) => unwrap(api.get('/super-admin/transactions/pending', { params: type ? { type } : undefined })),
+  settleTransaction: (id, status) => unwrap(api.put(`/super-admin/transactions/${id}/settle`, { status })),
+  approveTransaction: (id) => unwrap(api.put(`/super-admin/transactions/${id}/settle`, { status: 'completed' })),
+  rejectTransaction: (id) => unwrap(api.put(`/super-admin/transactions/${id}/settle`, { status: 'rejected' })),
 
   getGames: (params) => unwrap(api.get('/games/available', { params })),
   getGame: (id) => unwrap(api.get(`/admin/games/${id}`)),
