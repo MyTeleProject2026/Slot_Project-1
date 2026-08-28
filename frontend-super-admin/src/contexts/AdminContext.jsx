@@ -42,8 +42,9 @@ export const AdminProvider = ({ children }) => {
 
   // Transactions / settlement
   const getTransactions = (params = {}) => request('get', '/admin/transactions', undefined, null, 'Failed to load transactions', { params });
-  const approveTransaction = id => request('put', `/admin/transactions/${id}/approve`, undefined, 'Transaction approved', 'Failed to approve transaction');
-  const rejectTransaction = (id, reason = '') => request('put', `/admin/transactions/${id}/reject`, { reason }, 'Transaction rejected', 'Failed to reject transaction');
+  const getPendingTransactions = (type) => request('get', '/super-admin/transactions/pending', undefined, null, 'Failed to load pending transactions', { params: type ? { type } : undefined });
+  const approveTransaction = id => request('put', `/super-admin/transactions/${id}/settle`, { status: 'completed' }, 'Transaction approved and settled', 'Failed to approve transaction');
+  const rejectTransaction = id => request('put', `/super-admin/transactions/${id}/settle`, { status: 'rejected' }, 'Transaction rejected', 'Failed to reject transaction');
 
   // Content
   const getPromotions = () => request('get', '/admin/promotions', undefined, null, 'Failed to load promotions');
@@ -76,7 +77,7 @@ export const AdminProvider = ({ children }) => {
     loading,
     getUsers, getUserDetails, updateUserStatus, adjustUserBalance, deleteUser,
     getGames, addGame, updateGame, deleteGame,
-    getTransactions, approveTransaction, rejectTransaction,
+    getTransactions, getPendingTransactions, approveTransaction, rejectTransaction,
     getPromotions, addPromotion, updatePromotion, deletePromotion,
     getBanners, addBanner, updateBanner, deleteBanner,
     getLanguages, updateLanguage, getSettings, updateSettings,
