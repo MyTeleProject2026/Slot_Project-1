@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const adminExtras = require('../controllers/adminExtras');
 const permanentUserController = require('../controllers/permanentUserController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
+
+// Keep the main controller intact while supplying handlers that were missing from
+// older versions of adminController.js.
+Object.assign(adminController, adminExtras);
 
 router.use(authenticate);
 router.use(authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN));
