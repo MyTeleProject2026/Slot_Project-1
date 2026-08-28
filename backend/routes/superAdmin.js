@@ -18,5 +18,7 @@ router.get('/settings', superAdminController.getSettings);
 router.put('/settings', superAdminController.updateSettings);
 router.put('/games/settings', superAdminController.updateGameSettings);
 router.put('/payments/settings', superAdminController.updatePaymentSettings);
+router.get('/activity', superAdminController.getActivityLog);
+router.get('/activity/stats', superAdminController.getActivityStats);
 
 module.exports = router;
