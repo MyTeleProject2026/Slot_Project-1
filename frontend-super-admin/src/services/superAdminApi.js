@@ -30,6 +30,8 @@ const superAdminApi = {
   getFullStats: () => unwrap(api.get('/main-admin/stats/full')),
   getAuditLogs: (params) => unwrap(api.get('/main-admin/audit/logs', { params })),
   getTransactionAudit: (params) => unwrap(api.get('/main-admin/audit/transactions', { params })),
+  getActivity: (params) => unwrap(api.get('/super-admin/activity', { params })),
+  getActivityStats: () => unwrap(api.get('/super-admin/activity/stats')),
 
   getUsers: (params) => unwrap(api.get('/admin/users', { params })),
   getUser: (id) => unwrap(api.get(`/admin/users/${id}`)),
