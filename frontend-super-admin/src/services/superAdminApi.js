@@ -1,16 +1,15 @@
 import api from './api';
 
-// Single API surface for the N999Bet owner console. Every method maps to a
-// backend route; no local/mock mutations are used by the control panel.
+// Single API surface for the N999Bet owner console. Methods below map to
+// authenticated backend routes. Sensitive game-outcome manipulation is
+// intentionally not exposed from the owner UI.
 const unwrap = (request) => request.then((response) => response?.data ?? response);
 
 const superAdminApi = {
-  // Authentication/session
   me: () => unwrap(api.get('/auth/me')),
   logout: () => unwrap(api.post('/auth/logout')),
   refresh: (refreshToken) => unwrap(api.post('/auth/refresh', { refreshToken })),
 
-  // Owner/admin accounts
   getAdmins: () => unwrap(api.get('/super-admin/admins')),
   createAdmin: (payload) => unwrap(api.post('/super-admin/admins', payload)),
   updateAdmin: (id, payload) => unwrap(api.put(`/super-admin/admins/${id}`, payload)),
@@ -18,7 +17,6 @@ const superAdminApi = {
   getAllAdmins: () => unwrap(api.get('/main-admin/all-admins')),
   getAdminAudit: () => unwrap(api.get('/main-admin/audit/admins')),
 
-  // N999Bet master balance and Slotopol funding ledger
   getBalance: () => unwrap(api.get('/super-admin/balance')),
   getMasterBalance: () => unwrap(api.get('/slotopol-funding/balance')),
   addBalance: (payload) => unwrap(api.post('/super-admin/balance/add', payload)),
@@ -28,47 +26,38 @@ const superAdminApi = {
   addBalanceToSuperAdmin: (payload) => unwrap(api.post('/main-admin/balance/add-to-super-admin', payload)),
   addBalanceToAdmin: (payload) => unwrap(api.post('/main-admin/balance/add-to-admin', payload)),
 
-  // Dashboard/operations
   getDashboardStats: () => unwrap(api.get('/admin/dashboard/stats')),
   getFullStats: () => unwrap(api.get('/main-admin/stats/full')),
   getAuditLogs: (params) => unwrap(api.get('/main-admin/audit/logs', { params })),
   getTransactionAudit: (params) => unwrap(api.get('/main-admin/audit/transactions', { params })),
 
-  // Player management
   getUsers: (params) => unwrap(api.get('/admin/users', { params })),
   getUser: (id) => unwrap(api.get(`/admin/users/${id}`)),
   updateUserStatus: (id, status) => unwrap(api.put(`/admin/users/${id}/status`, { status })),
   adjustUserBalance: (id, amount, type = 'adjustment') => unwrap(api.post(`/admin/users/${id}/balance`, { amount, type })),
   deleteUser: (id, reason = '') => unwrap(api.delete(`/admin/users/${id}`, { data: { reason } })),
 
-  // Transactions
   getTransactions: (params) => unwrap(api.get('/admin/transactions', { params })),
   approveTransaction: (id) => unwrap(api.put(`/admin/transactions/${id}/approve`)),
   rejectTransaction: (id, reason = '') => unwrap(api.put(`/admin/transactions/${id}/reject`, { reason })),
 
-  // Slotopol game catalog/control metadata
   getGames: (params) => unwrap(api.get('/games/available', { params })),
   getGame: (id) => unwrap(api.get(`/admin/games/${id}`)),
   createGame: (payload) => unwrap(api.post('/admin/games', payload)),
   updateGame: (id, payload) => unwrap(api.put(`/admin/games/${id}`, payload)),
-  updateGameRTP: (id, rtpAdjustment) => unwrap(api.put(`/admin/games/${id}/rtp`, { rtpAdjustment })),
-  updateGameWinRate: (id, winRateAdjustment) => unwrap(api.put(`/admin/games/${id}/win-rate`, { winRateAdjustment })),
   deleteGame: (id) => unwrap(api.delete(`/admin/games/${id}`)),
   getGameCapabilities: (id) => unwrap(api.get(`/games/capabilities/${id}`)),
 
-  // Promotions
   getPromotions: (params) => unwrap(api.get('/admin/promotions', { params })),
   addPromotion: (payload) => unwrap(api.post('/admin/promotions', payload)),
   updatePromotion: (id, payload) => unwrap(api.put(`/admin/promotions/${id}`, payload)),
   deletePromotion: (id) => unwrap(api.delete(`/admin/promotions/${id}`)),
 
-  // Banners
   getBanners: () => unwrap(api.get('/admin/banners')),
   createBanner: (payload) => unwrap(api.post('/admin/banners', payload)),
   updateBanner: (id, payload) => unwrap(api.put(`/admin/banners/${id}`, payload)),
   deleteBanner: (id) => unwrap(api.delete(`/admin/banners/${id}`)),
 
-  // Language/platform settings
   getLanguages: () => unwrap(api.get('/admin/languages')),
   updateLanguage: (code, translations) => unwrap(api.put(`/admin/languages/${encodeURIComponent(code)}`, { translations })),
   getSettings: (category) => unwrap(api.get(`/admin/settings/${encodeURIComponent(category)}`)),
@@ -77,7 +66,6 @@ const superAdminApi = {
   updateOwnerSettings: (payload) => unwrap(api.put('/super-admin/settings', payload)),
   updateGameSettings: (payload) => unwrap(api.put('/super-admin/games/settings', payload)),
 
-  // Payment providers / wallet destinations
   getPaymentProviders: () => unwrap(api.get('/super-admin/payment-providers')),
   createPaymentProvider: (payload) => unwrap(api.post('/super-admin/payment-providers', payload)),
   updatePaymentProvider: (id, payload) => unwrap(api.put(`/super-admin/payment-providers/${id}`, payload)),
@@ -85,12 +73,10 @@ const superAdminApi = {
   updatePaymentSettings: (payload) => unwrap(api.put('/super-admin/payments/settings', payload)),
   getPublicPaymentProviders: () => unwrap(api.get('/payment-providers')),
 
-  // Support
   getSupportMessages: (params) => unwrap(api.get('/admin/support/messages', { params })),
   sendSupportReply: (userId, message) => unwrap(api.post('/admin/support/reply', { userId, message })),
   resolveSupportTicket: (id) => unwrap(api.put(`/admin/support/resolve/${id}`)),
 
-  // Integration/health
   getIntegrationStatus: () => unwrap(api.get('/integration/status')),
   health: () => unwrap(api.get('/health')),
 };
