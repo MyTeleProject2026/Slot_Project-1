@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES } = require('../config/roles');
+const slotopolConfig = require('../config/slotopol');
+const SlotopolService = require('../services/slotopolService');
 
 const capabilities = {
   auth: ['/api/auth/login', '/api/auth/refresh', '/api/auth/me'],
@@ -14,6 +16,7 @@ const capabilities = {
 
 router.get('/status', authenticate, authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), async (req, res) => {
   const checks = {};
+
   try {
     await pool.query('SELECT 1');
     checks.database = { ok: true, engine: 'TiDB/MySQL' };
@@ -22,10 +25,25 @@ router.get('/status', authenticate, authorize(ROLES.ADMIN, ROLES.SUPER_ADMIN, RO
   }
 
   checks.authentication = { ok: true, userId: req.userId, role: req.userRole };
-  checks.slotopolAccessKey = { configured: Boolean(process.env.SLOTOPOL_ACCESS_KEY) };
   checks.country = process.env.DEFAULT_COUNTRY_CODE || 'MM';
   checks.currency = process.env.DEFAULT_CURRENCY || 'MMK';
   checks.timezone = process.env.DEFAULT_TIMEZONE || 'Asia/Yangon';
+
+  try {
+    const config = slotopolConfig.requireSlotopolConfig();
+    checks.slotopol = { configured: true, url: config.url, clubId: config.clubId };
+    try {
+      await SlotopolService.getToken();
+      checks.slotopol.reachable = true;
+      checks.slotopol.authenticated = true;
+    } catch (error) {
+      checks.slotopol.reachable = true;
+      checks.slotopol.authenticated = false;
+      checks.slotopol.error = error.message;
+    }
+  } catch (error) {
+    checks.slotopol = { configured: false, reachable: false, authenticated: false, error: error.message };
+  }
 
   const ok = checks.database.ok && checks.authentication.ok;
   res.status(ok ? 200 : 503).json({
