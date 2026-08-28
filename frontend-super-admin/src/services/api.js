@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const configuredApiUrl = import.meta.env.VITE_API_URL;
-const API_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:5000/api' : '');
-if (!API_URL) throw new Error('VITE_API_URL is required for production frontend-super-admin deployment');
+const defaultProductionApiUrl = 'https://testing-backend-deploy-epvl.onrender.com/api';
+const API_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:5000/api' : defaultProductionApiUrl);
 
 export const api = axios.create({ baseURL: API_URL, headers: { 'Content-Type': 'application/json' }, timeout: 30000 });
 
