@@ -1,61 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaSearch, FaSyncAlt, FaBolt } from 'react-icons/fa';
 import { useGames } from '../hooks/useGames';
 import GameCard from '../components/games/GameCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-
-const Slots = () => {
-  const { games, loading, fetchGames, error } = useGames();
-
-  useEffect(() => {
-    // ✅ Fetch all games (same as Games page)
-    fetchGames();
-  }, []);
-
-  if (loading) return <LoadingSpinner />;
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 max-w-md mx-auto">
-          <p className="text-red-400">{error}</p>
-          <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-400 transition">
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <Link to="/games" className="text-gray-400 hover:text-white transition-all hover:translate-x-[-4px]">
-            <FaArrowLeft />
-          </Link>
-          <h1 className="text-2xl md:text-3xl font-bold gradient-text">🎰 Slots</h1>
-        </div>
-
-        {games.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <p>No slot games available</p>
-          </div>
-        ) : (
-          <div className="game-grid">
-            {games.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
-          </div>
-        )}
-      </motion.div>
-    </div>
-  );
-};
-
-export default Slots;
+const providerOf=g=>g?.provider&&g.provider!=='unknown'?g.provider:g?.aliases?.[0]?.prov||'Unknown';
+const nameOf=g=>g?.name&&g.name!=='Unknown Game'?g.name:g?.aliases?.[0]?.name||'Unknown Game';
+export default function Slots(){
+ const {games,loading,fetchGames,error}=useGames(); const [query,setQuery]=useState(''); const [provider,setProvider]=useState('ALL'); const [sort,setSort]=useState('featured');
+ useEffect(()=>{fetchGames();},[fetchGames]);
+ const providers=useMemo(()=>['ALL',...Array.from(new Set((games||[]).map(providerOf).filter(Boolean))).sort((a,b)=>a.localeCompare(b))],[games]);
+ const filtered=useMemo(()=>{const q=query.trim().toLowerCase();return [...(games||[])].filter(g=>(provider==='ALL'||providerOf(g)===provider)&&(!q||`${nameOf(g)} ${providerOf(g)} ${g.id||''}`.toLowerCase().includes(q))).sort((a,b)=>sort==='name'?nameOf(a).localeCompare(nameOf(b)):sort==='provider'?providerOf(a).localeCompare(providerOf(b)):0)},[games,provider,query,sort]);
+ if(loading&&!(games||[]).length)return <LoadingSpinner/>;
+ if(error)return <div className="container mx-auto px-4 py-12 text-center"><div className="mx-auto max-w-md rounded-2xl border border-red-500/20 bg-red-500/10 p-6"><p className="text-red-300">{error}</p><button onClick={fetchGames} className="mt-4 rounded-xl bg-primary-500 px-6 py-2 font-bold text-dark-900">Retry</button></div></div>;
+ return <div className="min-h-screen bg-[#05070d] px-3 py-5 text-white sm:px-5 lg:px-8"><div className="mx-auto max-w-[1600px]">
+  <motion.header initial={{opacity:0,y:18}} animate={{opacity:1,y:0}} className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#15101f] via-[#0d1220] to-[#070910] p-5 sm:p-8 shadow-2xl"><div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-amber-400/10 blur-3xl"/><div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"><div><Link to="/games" className="mb-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-slate-500 hover:text-white"><FaArrowLeft/> Games</Link><div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-amber-300 to-orange-500 text-slate-950 shadow-xl"><FaBolt/></span><div><p className="text-[10px] font-black uppercase tracking-[.3em] text-amber-400">N999Bet Clubs</p><h1 className="text-3xl font-black sm:text-4xl">Premium Slots</h1></div></div><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">Browse the live Slotopol catalogue and launch server-backed game sessions. Game metadata, limits, capabilities, reels and outcomes come from the integration rather than placeholder gameplay.</p></div><div className="flex items-center gap-2 text-xs text-slate-500"><span className="h-2 w-2 rounded-full bg-emerald-400"/> Live catalogue · {(games||[]).length} games</div></div></motion.header>
+  <div className="sticky top-0 z-20 mt-4 rounded-2xl border border-white/10 bg-[#090c14]/95 p-3 shadow-xl backdrop-blur-xl"><div className="flex flex-col gap-3 lg:flex-row"><div className="relative flex-1"><FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search game or provider…" className="w-full rounded-xl border border-white/10 bg-white/[.04] py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-amber-400/40"/></div><select value={provider} onChange={e=>setProvider(e.target.value)} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm text-white outline-none">{providers.map(p=><option key={p} value={p} className="bg-slate-900">{p==='ALL'?'All Providers':p}</option>)}</select><select value={sort} onChange={e=>setSort(e.target.value)} className="rounded-xl border border-white/10 bg-white/[.04] px-4 py-3 text-sm text-white outline-none"><option value="featured" className="bg-slate-900">Featured</option><option value="name" className="bg-slate-900">Name A–Z</option><option value="provider" className="bg-slate-900">Provider</option></select><button onClick={fetchGames} className="rounded-xl border border-white/10 px-4 py-3 text-sm font-bold text-slate-300 hover:text-white"><FaSyncAlt className={loading?'animate-spin inline mr-2':'inline mr-2'}/>Refresh</button></div><div className="mt-3 flex gap-2 overflow-x-auto pb-1">{providers.slice(0,20).map(p=><button key={p} onClick={()=>setProvider(p)} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${provider===p?'bg-amber-400 text-slate-950':'bg-white/[.04] text-slate-500 hover:text-white'}`}>{p}</button>)}</div></div>
+  <div className="mb-4 mt-6 flex items-center justify-between"><div><h2 className="text-lg font-black">Slot Lobby</h2><p className="text-xs text-slate-500">Showing {filtered.length} of {(games||[]).length}</p></div></div>
+  {filtered.length?<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">{filtered.map((game,i)=><motion.div key={game.id} initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{delay:Math.min(i*.025,.35)}}><GameCard game={game}/></motion.div>)}</div>:<div className="rounded-2xl border border-white/10 bg-white/[.03] py-16 text-center text-slate-500">No games match your search.</div>}
+ </div></div>;
+}
