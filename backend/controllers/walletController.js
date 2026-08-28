@@ -14,12 +14,7 @@ exports.getBalance = async (req, res) => {
     const main = Number(wallet.main_balance) || 0;
     const bonus = Number(wallet.bonus_balance) || 0;
     const commission = Number(wallet.commission_balance) || 0;
-    res.json({ success: true, balance: {
-      main, bonus, commission,
-      locked: Number(wallet.locked_balance) || 0,
-      total: main + bonus + commission,
-      currency: process.env.N999BET_CURRENCY || 'MMK'
-    } });
+    res.json({ success: true, balance: { main, bonus, commission, locked: Number(wallet.locked_balance) || 0, total: main + bonus + commission, currency: process.env.N999BET_CURRENCY || 'MMK' } });
   } catch (error) {
     console.error('Get balance error:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch balance' });
@@ -33,16 +28,25 @@ exports.requestDeposit = async (req, res) => {
     const bankAccountId = req.body.bankAccountId ?? null;
     if (!amount) return res.status(400).json({ success: false, error: 'A positive deposit amount is required' });
     if (!paymentMethod) return res.status(400).json({ success: false, error: 'Payment method is required' });
+
+    const [providers] = await pool.query(
+      'SELECT id, code, type, name, currency, config FROM payment_providers WHERE code = ? AND enabled = 1 LIMIT 1',
+      [paymentMethod]
+    );
+    if (!providers.length) return res.status(400).json({ success: false, error: 'Selected payment method is unavailable' });
+
+    const provider = providers[0];
+    const currency = provider.currency || process.env.N999BET_CURRENCY || 'MMK';
     const wallet = await Wallet.findByUserId(req.userId);
     if (!wallet) return res.status(404).json({ success: false, error: 'Wallet not found' });
     const before = Number(wallet.main_balance) || 0;
     const txId = await Transaction.create({
       userId: req.userId, type: 'deposit', amount,
       beforeBalance: before, afterBalance: before, walletType: 'main', status: 'pending',
-      description: `Deposit via ${paymentMethod}`,
-      metadata: { paymentMethod, bankAccountId, currency: process.env.N999BET_CURRENCY || 'MMK' }
+      description: `Deposit via ${provider.name}`,
+      metadata: { paymentMethod: provider.code, paymentProviderId: provider.id, bankAccountId, currency }
     });
-    res.status(201).json({ success: true, transactionId: txId, status: 'pending', message: 'Deposit request submitted' });
+    res.status(201).json({ success: true, transactionId: txId, status: 'pending', currency, message: 'Deposit request submitted' });
   } catch (error) {
     console.error('Request deposit error:', error);
     res.status(500).json({ success: false, error: 'Deposit request failed' });
