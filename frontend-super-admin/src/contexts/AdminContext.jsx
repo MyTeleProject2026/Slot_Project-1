@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
 
@@ -20,7 +20,6 @@ export const AdminProvider = ({ children }) => {
   const adjustUserBalance=(id,amount,type='adjustment')=>request('post',`/admin/users/${id}/balance`,{amount,type},'Balance adjusted','Failed to adjust balance');
   const deleteUser=(id,reason='')=>request('delete',`/admin/users/${id}`,{reason},'User deleted','Failed to delete user');
 
-  // Slotopol is the authoritative game catalog. Admin routes remain for N999Bet metadata/control mutations.
   const getGames=(params={})=>request('get','/games/available',undefined,null,'Failed to load Slotopol games',{params});
   const addGame=data=>request('post','/admin/games',data,'Game metadata added','Failed to add game');
   const updateGame=(id,data)=>request('put',`/admin/games/${id}`,data,'Game updated','Failed to update game');
@@ -37,7 +36,15 @@ export const AdminProvider = ({ children }) => {
   const deletePromotion=id=>request('delete',`/admin/promotions/${id}`,undefined,'Promotion deleted','Failed to delete promotion');
   const getBanners=()=>request('get','/admin/banners',undefined,null,'Failed to load banners'); const addBanner=data=>request('post','/admin/banners',data,'Banner added','Failed to add banner'); const updateBanner=(id,data)=>request('put',`/admin/banners/${id}`,data,'Banner updated','Failed to update banner'); const deleteBanner=id=>request('delete',`/admin/banners/${id}`,undefined,'Banner deleted','Failed to delete banner');
   const getLanguages=()=>request('get','/admin/languages',undefined,null,'Failed to load languages'); const updateLanguage=(code,translations)=>request('put',`/admin/languages/${code}`,{translations},'Language updated','Failed to update language'); const getSettings=category=>request('get',`/admin/settings/${category}`,undefined,null,'Failed to load settings'); const updateSettings=(category,settings)=>request('put',`/admin/settings/${category}`,settings,'Settings updated','Failed to update settings');
-  const getSupportMessages=()=>request('get','/admin/support/messages',undefined,null,'Failed to load messages'); const sendSupportReply=(userId,message)=>request('post','/admin/support/reply',{userId,message},'Reply sent','Failed to send reply'); const resolveSupportTicket=id=>request('put',`/admin/support/resolve/${id}`,undefined,'Ticket resolved','Failed to resolve ticket'); const getDashboardStats=()=>request('get','/admin/dashboard/stats',undefined,null,'Failed to load dashboard stats');
+  const getSupportMessages=()=>request('get','/admin/support/messages',undefined,null,'Failed to load messages'); const sendSupportReply=(userId,message)=>request('post','/admin/support/reply',{userId,message},'Reply sent','Failed to send reply'); const resolveSupportTicket=id=>request('put',`/admin/support/resolve/${id}`,undefined,'Ticket resolved','Failed to resolve ticket');
+
+  // Dashboard is used as an effect dependency. Memoize it so the provider re-rendering
+  // after each request cannot retrigger Dashboard's initial load indefinitely.
+  const getDashboardStats = useCallback(
+    () => request('get','/admin/dashboard/stats',undefined,null,'Failed to load dashboard stats'),
+    [api]
+  );
+
   const value={loading,getUsers,getUserDetails,updateUserStatus,adjustUserBalance,deleteUser,getGames,addGame,updateGame,updateGameRTP,updateGameWinRate,deleteGame,getTransactions,approveTransaction,rejectTransaction,getPromotions,addPromotion,updatePromotion,deletePromotion,getBanners,addBanner,updateBanner,deleteBanner,getLanguages,updateLanguage,getSettings,updateSettings,getSupportMessages,sendSupportReply,resolveSupportTicket,getDashboardStats};
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 };
