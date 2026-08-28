@@ -1,4 +1,4 @@
-const { verifyToken } = require('../config/auth');
+const { verifyAccessToken } = require('../config/auth');
 const pool = require('../config/database');
 const { hasPermission } = require('../config/roles');
 
@@ -9,9 +9,9 @@ function getVirtualAdminById(userId) {
     { id: 99993, role: 'admin', username: process.env.ADMIN_USERNAME },
     { id: 99994, role: 'employee', username: process.env.EMPLOYEE_USERNAME },
   ];
-  const admin = virtualAdmins.find(a => a.id === userId);
+  const admin = virtualAdmins.find(a => a.id === Number(userId));
   if (!admin || !admin.username) return null;
-  return { id: admin.id, username: admin.username, email: `${admin.username}@admin.local`, fullName: admin.role.replace('_', ' ').toUpperCase(), role: admin.role, status: 'active', isVirtual: true, club_id: Number(process.env.N999BET_DEFAULT_CLUB_ID || 1) };
+  return { id: admin.id, username: admin.username, email: `${admin.username}@admin.local`, fullName: admin.role.replace('_', ' ').toUpperCase(), role: admin.role, status: 'active', isVirtual: true, club_id: Number(process.env.N999BET_SLOTOPOL_CLUB_ID || process.env.N999BET_DEFAULT_CLUB_ID || 1) };
 }
 
 async function loadUser(userId) {
@@ -22,10 +22,10 @@ async function loadUser(userId) {
 
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null;
     if (!token) return res.status(401).json({ success: false, error: 'No token provided', code: 'AUTH_001' });
-    const decoded = verifyToken(token);
-    if (!decoded) return res.status(401).json({ success: false, error: 'Invalid or expired token', code: 'AUTH_002' });
+    const decoded = verifyAccessToken(token);
+    if (!decoded) return res.status(401).json({ success: false, error: 'Invalid or expired access token', code: 'AUTH_002' });
     const virtualAdmin = getVirtualAdminById(decoded.userId);
     const user = virtualAdmin || await loadUser(decoded.userId);
     if (!user) return res.status(401).json({ success: false, error: 'User not found', code: 'AUTH_003' });
@@ -42,9 +42,9 @@ const authenticate = async (req, res, next) => {
 
 const optionalAuthenticate = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null;
     if (!token) return next();
-    const decoded = verifyToken(token);
+    const decoded = verifyAccessToken(token);
     if (!decoded) return next();
     const virtualAdmin = getVirtualAdminById(decoded.userId);
     const user = virtualAdmin || await loadUser(decoded.userId);
