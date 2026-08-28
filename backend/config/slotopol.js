@@ -11,12 +11,17 @@ if (!Number.isInteger(configuredClubId) || configuredClubId <= 0) {
   throw new Error('N999BET_SLOTOPOL_CLUB_ID must be a positive integer');
 }
 
-module.exports = {
-  url: process.env.SLOTOPOL_URL || 'http://localhost:8080',
-  adminEmail: process.env.SLOTOPOL_ADMIN_EMAIL || 'admin@slotopol.com',
-  adminPassword: process.env.SLOTOPOL_ADMIN_PASSWORD || 'admin123',
+const url = process.env.SLOTOPOL_URL;
+const adminEmail = process.env.SLOTOPOL_ADMIN_EMAIL;
+const adminPassword = process.env.SLOTOPOL_ADMIN_PASSWORD;
 
-  // N999Bet is explicitly bound to Slotopol Club ID 1 by default.
-  // Override only when deploying a different N999Bet instance.
+if (!url) throw new Error('SLOTOPOL_URL must be configured');
+if (!adminEmail) throw new Error('SLOTOPOL_ADMIN_EMAIL must be configured');
+if (!adminPassword) throw new Error('SLOTOPOL_ADMIN_PASSWORD must be configured');
+
+module.exports = {
+  url,
+  adminEmail,
+  adminPassword,
   clubId: configuredClubId,
 };
