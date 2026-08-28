@@ -22,6 +22,7 @@ const promotionRoutes = require('./routes/promotions');
 const settingsRoutes = require('./routes/settings');
 const paymentProviderRoutes = require('./routes/paymentProviders');
 const publicPaymentProviderRoutes = require('./routes/publicPaymentProviders');
+const transactionSettlementRoutes = require('./routes/transactionSettlement');
 const slotopolFundingRoutes = require('./routes/slotopolFunding');
 const integrationRoutes = require('./routes/integration');
 
@@ -51,6 +52,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/payment-providers', publicPaymentProviderRoutes);
 app.use('/api/super-admin/payment-providers', paymentProviderRoutes);
+app.use('/api/super-admin/transactions', transactionSettlementRoutes);
 app.use('/api/slotopol-funding', slotopolFundingRoutes);
 app.use('/api/integration', integrationRoutes);
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server is running', timestamp: new Date().toISOString(), uptime: process.uptime() }));
