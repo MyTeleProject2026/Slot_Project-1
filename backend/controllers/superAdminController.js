@@ -6,6 +6,66 @@ const bcrypt = require('bcryptjs');
 const isFinitePositive = (value) => Number.isFinite(Number(value)) && Number(value) > 0;
 
 // ============================================================
+// ADMIN ACTIVITY / AUDIT
+// ============================================================
+exports.getActivityLog = async (req, res) => {
+  try {
+    const rawLimit = Number(req.query.limit || 100);
+    const limit = Number.isInteger(rawLimit) ? Math.min(Math.max(rawLimit, 1), 200) : 100;
+    const action = typeof req.query.action === 'string' && req.query.action.trim()
+      ? req.query.action.trim()
+      : null;
+    const targetType = typeof req.query.targetType === 'string' && req.query.targetType.trim()
+      ? req.query.targetType.trim()
+      : null;
+
+    const where = [];
+    const params = [];
+    if (action) {
+      where.push('al.action = ?');
+      params.push(action);
+    }
+    if (targetType) {
+      where.push('al.target_type = ?');
+      params.push(targetType);
+    }
+
+    const sql = `
+      SELECT al.id, al.admin_id, u.username AS admin_name,
+             al.action, al.target_type, al.target_id,
+             al.description, al.metadata, al.created_at
+      FROM admin_activity_log al
+      LEFT JOIN users u ON al.admin_id = u.id
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY al.created_at DESC
+      LIMIT ?
+    `;
+    params.push(limit);
+
+    const [rows] = await pool.query(sql, params);
+    res.json({ success: true, activities: rows });
+  } catch (error) {
+    console.error('Get activity log error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch activity log' });
+  }
+};
+
+exports.getActivityStats = async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT action, COUNT(*) AS count, DATE(created_at) AS date
+      FROM admin_activity_log
+      GROUP BY action, DATE(created_at)
+      ORDER BY date DESC, count DESC
+    `);
+    res.json({ success: true, stats: rows });
+  } catch (error) {
+    console.error('Get activity stats error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch activity statistics' });
+  }
+};
+
+// ============================================================
 // ADMIN MANAGEMENT
 // ============================================================
 
@@ -149,9 +209,7 @@ exports.addBalanceToAdmin = async (req, res) => {
         'UPDATE admin_balances SET balance = balance - ? WHERE admin_id = ? AND balance >= ?',
         [Number(amount), req.userId, Number(amount)]
       );
-      if (debit.affectedRows !== 1) {
-        throw new Error('Insufficient super admin balance');
-      }
+      if (debit.affectedRows !== 1) throw new Error('Insufficient super admin balance');
       const [credit] = await connection.query(
         'UPDATE admin_balances SET balance = balance + ? WHERE admin_id = ?',
         [Number(amount), adminId]
@@ -233,24 +291,14 @@ exports.updateSettings = async (req, res) => {
   }
 };
 
-// Game settings are restricted to operational configuration. The owner console
-// must not provide controls that alter individual-player outcomes or secretly
-// rig win/loss rates.
 exports.updateGameSettings = async (req, res) => {
   try {
     const { enabled, maintenanceMode, defaultBet, maxBet } = req.body;
     const allowed = { enabled, maintenanceMode, defaultBet, maxBet };
     const updates = Object.entries(allowed).filter(([, value]) => value !== undefined);
-    if (!updates.length) {
-      return res.status(400).json({ success: false, error: 'No supported game operational settings supplied' });
-    }
+    if (!updates.length) return res.status(400).json({ success: false, error: 'No supported game operational settings supplied' });
 
-    const keyMap = {
-      enabled: 'games_enabled',
-      maintenanceMode: 'games_maintenance_mode',
-      defaultBet: 'default_bet',
-      maxBet: 'max_bet'
-    };
+    const keyMap = { enabled: 'games_enabled', maintenanceMode: 'games_maintenance_mode', defaultBet: 'default_bet', maxBet: 'max_bet' };
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -283,17 +331,9 @@ exports.updatePaymentSettings = async (req, res) => {
     if (maxWithdraw !== undefined && !isFinitePositive(maxWithdraw)) return res.status(400).json({ success: false, error: 'Invalid maximum withdrawal' });
     if (minDeposit !== undefined && maxDeposit !== undefined && Number(minDeposit) > Number(maxDeposit)) return res.status(400).json({ success: false, error: 'Minimum deposit cannot exceed maximum deposit' });
     if (minWithdraw !== undefined && maxWithdraw !== undefined && Number(minWithdraw) > Number(maxWithdraw)) return res.status(400).json({ success: false, error: 'Minimum withdrawal cannot exceed maximum withdrawal' });
-    if (paymentMethods !== undefined && (!Array.isArray(paymentMethods) || paymentMethods.some((m) => !m || typeof m !== 'object'))) {
-      return res.status(400).json({ success: false, error: 'paymentMethods must be an array of objects' });
-    }
+    if (paymentMethods !== undefined && (!Array.isArray(paymentMethods) || paymentMethods.some((m) => !m || typeof m !== 'object'))) return res.status(400).json({ success: false, error: 'paymentMethods must be an array of objects' });
 
-    const values = {
-      min_deposit: minDeposit,
-      max_deposit: maxDeposit,
-      min_withdraw: minWithdraw,
-      max_withdraw: maxWithdraw,
-      payment_methods: paymentMethods
-    };
+    const values = { min_deposit: minDeposit, max_deposit: maxDeposit, min_withdraw: minWithdraw, max_withdraw: maxWithdraw, payment_methods: paymentMethods };
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
