@@ -12,6 +12,25 @@ class AdminBalance {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_admin_balances_role (role)
     )`);
+
+    // Super-admin/employee accounts configured through environment variables are
+    // virtual administrative identities, not player rows in `users`. Older
+    // deployments created an FK from admin_balances.admin_id -> users.id, which
+    // makes the virtual IDs (99991, etc.) impossible to initialize. Remove only
+    // that legacy FK when it exists; the application still validates admin roles
+    // before allowing balance operations.
+    const [constraints] = await connection.query(
+      `SELECT CONSTRAINT_NAME
+       FROM information_schema.KEY_COLUMN_USAGE
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'admin_balances'
+         AND COLUMN_NAME = 'admin_id'
+         AND REFERENCED_TABLE_NAME = 'users'`
+    );
+    for (const row of constraints) {
+      const name = String(row.CONSTRAINT_NAME).replace(/`/g, '');
+      await connection.query(`ALTER TABLE admin_balances DROP FOREIGN KEY \`${name}\``);
+    }
   }
 
   static async create(adminId, role, connection = pool) {
