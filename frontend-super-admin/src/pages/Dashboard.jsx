@@ -14,6 +14,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [masterBalance, setMasterBalance] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [fundingOverview, setFundingOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
 
@@ -26,11 +27,12 @@ const Dashboard = () => {
         getDashboardStats(),
         superAdminApi.getMasterBalance(),
         superAdminApi.getActivity({ limit: 5 }),
+        superAdminApi.getFundingOverview(),
       ]);
 
       if (!mounted) return;
 
-      const [statsResult, balanceResult, activityResult] = results;
+      const [statsResult, balanceResult, activityResult, fundingResult] = results;
       const nextErrors = [];
 
       if (statsResult.status === 'fulfilled') {
@@ -47,6 +49,13 @@ const Dashboard = () => {
       } else {
         console.error('Failed to load master balance:', balanceResult.reason);
         nextErrors.push(balanceResult.reason?.response?.data?.error || 'Master balance could not be loaded.');
+      }
+
+      if (fundingResult.status === 'fulfilled') {
+        setFundingOverview(fundingResult.value || {});
+      } else {
+        console.error('Failed to load funding overview:', fundingResult.reason);
+        nextErrors.push('Master funding overview could not be loaded.');
       }
 
       if (activityResult.status === 'fulfilled') {
@@ -96,12 +105,13 @@ const Dashboard = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
           <StatsCard title="Total Users" value={stats?.users?.total_users || 0} icon={FaUsers} color="primary" />
           <StatsCard title="Total Games" value={stats?.games?.total_games || 0} icon={FaGamepad} color="blue" />
           <StatsCard title="Master Balance (MMK)" value={formatMMK(balance)} icon={FaWallet} color="primary" />
           <StatsCard title="Total Deposits (MMK)" value={formatMMK(deposits)} icon={FaMoneyBillWave} color="green" />
           <StatsCard title="Total Withdrawals (MMK)" value={formatMMK(withdrawals)} icon={FaExchangeAlt} color="red" />
+          <StatsCard title="Available Master Funds" value={formatMMK(Number(fundingOverview?.availableBalance ?? balance))} icon={FaWallet} color="blue" />
         </div>
 
         <div className="bg-dark-800/80 backdrop-blur-sm rounded-2xl p-6 border border-dark-700/50">
