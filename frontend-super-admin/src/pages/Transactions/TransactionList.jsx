@@ -7,7 +7,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { formatMMK } from '../../config/platform';
 
 const TransactionList = () => {
-  const { getTransactions, approveTransaction, rejectTransaction, loading: actionLoading } = useAdmin();
+  const { getTransactions, getPendingTransactions, approveTransaction, rejectTransaction, loading: actionLoading } = useAdmin();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -19,8 +19,10 @@ const TransactionList = () => {
     if (showSpinner) setLoading(true); else setRefreshing(true);
     setError('');
     try {
-      const data = await getTransactions({ status: filter !== 'all' ? filter : undefined });
-      setTransactions(Array.isArray(data?.transactions) ? data.transactions : []);
+      const data = filter === 'pending'
+        ? await getPendingTransactions()
+        : await getTransactions({ status: filter !== 'all' ? filter : undefined });
+      setTransactions(Array.isArray(data) ? data : (Array.isArray(data?.transactions) ? data.transactions : []));
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load transactions');
     } finally {
@@ -47,9 +49,8 @@ const TransactionList = () => {
   };
 
   const handleReject = async (id) => {
-    const reason = window.prompt('Reason for rejection (optional):', 'Rejected by administrator');
-    if (reason === null) return;
-    try { await rejectTransaction(id, reason); await loadTransactions(false); } catch (_) { /* context displays API error */ }
+    if (!window.confirm('Reject this transaction? This action will settle it as rejected and cannot be undone.')) return;
+    try { await rejectTransaction(id); await loadTransactions(false); } catch (_) { /* context displays API error */ }
   };
 
   const columns = [
