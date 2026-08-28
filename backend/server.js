@@ -21,6 +21,7 @@ const chatRoutes = require('./routes/chat');
 const promotionRoutes = require('./routes/promotions');
 const settingsRoutes = require('./routes/settings');
 const paymentProviderRoutes = require('./routes/paymentProviders');
+const publicPaymentProviderRoutes = require('./routes/publicPaymentProviders');
 const slotopolFundingRoutes = require('./routes/slotopolFunding');
 const integrationRoutes = require('./routes/integration');
 
@@ -48,6 +49,7 @@ app.use('/api/employee', employeeRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/payment-providers', publicPaymentProviderRoutes);
 app.use('/api/super-admin/payment-providers', paymentProviderRoutes);
 app.use('/api/slotopol-funding', slotopolFundingRoutes);
 app.use('/api/integration', integrationRoutes);
@@ -63,14 +65,7 @@ httpServer.listen(PORT, '0.0.0.0', () => console.log(`🚀 Server running on por
   await pool.query(`CREATE TABLE IF NOT EXISTS admin_balances (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, admin_id BIGINT UNSIGNED NOT NULL UNIQUE, role VARCHAR(32) NOT NULL, balance DECIMAL(24,2) NOT NULL DEFAULT 0, frozen_balance DECIMAL(24,2) NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, INDEX idx_admin_balances_role (role))`);
   await pool.query(`CREATE TABLE IF NOT EXISTS payment_providers (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, code VARCHAR(64) NOT NULL UNIQUE, type VARCHAR(32) NOT NULL, name VARCHAR(128) NOT NULL, currency VARCHAR(16) NOT NULL DEFAULT 'MMK', config JSON NULL, enabled TINYINT(1) NOT NULL DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
   await pool.query(`CREATE TABLE IF NOT EXISTS slotopol_funding_ledger (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, transfer_id VARCHAR(128) NOT NULL UNIQUE, recipient_admin_id BIGINT UNSIGNED NOT NULL, amount DECIMAL(24,2) NOT NULL, currency VARCHAR(16) NOT NULL DEFAULT 'MMK', country_code VARCHAR(8) NOT NULL DEFAULT 'MM', description VARCHAR(500) NULL, status VARCHAR(32) NOT NULL DEFAULT 'completed', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, INDEX idx_slotopol_funding_recipient (recipient_admin_id), INDEX idx_slotopol_funding_created (created_at))`);
-  const alterStatements = [
-    "ALTER TABLE promotions ADD COLUMN country_code VARCHAR(8) NOT NULL DEFAULT 'MM'",
-    "ALTER TABLE promotions ADD COLUMN currency VARCHAR(16) NOT NULL DEFAULT 'MMK'",
-    "ALTER TABLE promotions ADD COLUMN language VARCHAR(16) NOT NULL DEFAULT 'my'",
-    "ALTER TABLE promotions ADD COLUMN title_my TEXT NULL",
-    "ALTER TABLE promotions ADD COLUMN description_my TEXT NULL",
-    "ALTER TABLE promotions ADD COLUMN terms_my TEXT NULL"
-  ];
+  const alterStatements = ["ALTER TABLE promotions ADD COLUMN country_code VARCHAR(8) NOT NULL DEFAULT 'MM'","ALTER TABLE promotions ADD COLUMN currency VARCHAR(16) NOT NULL DEFAULT 'MMK'","ALTER TABLE promotions ADD COLUMN language VARCHAR(16) NOT NULL DEFAULT 'my'","ALTER TABLE promotions ADD COLUMN title_my TEXT NULL","ALTER TABLE promotions ADD COLUMN description_my TEXT NULL","ALTER TABLE promotions ADD COLUMN terms_my TEXT NULL"];
   for (const sql of alterStatements) { try { await pool.query(sql); } catch (e) { if (!/duplicate column|already exists/i.test(e.message)) console.warn('Promotion schema migration warning:', e.message); } }
   await pool.query("UPDATE promotions SET country_code='MM', currency='MMK', language='my' WHERE country_code IS NULL OR country_code='' OR currency IS NULL OR currency=''");
   console.log('✅ Database tables initialized successfully');
