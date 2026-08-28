@@ -90,9 +90,9 @@ class Wallet {
 
   static async unlockBalance(userId, amount) {
     const [result] = await pool.query(
-      `UPDATE wallets SET main_balance = main_balance + ?, locked_balance = locked_balance - ? 
+      `UPDATE wallets SET main_balance = main_balance + ?, locked_balance = locked_balance - ?
        WHERE user_id = ? AND locked_balance >= ?`,
-      [amount, amount, userId, userId, amount]
+      [amount, amount, userId, amount]
     );
     return result.affectedRows > 0;
   }
