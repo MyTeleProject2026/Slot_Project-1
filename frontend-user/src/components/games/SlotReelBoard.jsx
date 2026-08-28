@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import slotAudio from '../../services/slotAudio';
+import { getSlotAnimationProfile } from '../../utils/slotAnimationProfile';
 
 const unwrapSymbol = (value) => value && typeof value === 'object'
   ? value.symbol ?? value.sym ?? value.id ?? value.value ?? value.code ?? value.name ?? '?'
@@ -101,6 +102,10 @@ export default function SlotReelBoard({ grid, wins = [], spinning = false, sound
   const normalized = useMemo(() => normalizeGrid(grid), [grid]);
   const [phase, setPhase] = useState(0);
   const [settled, setSettled] = useState(false);
+  const reducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+  const animation = getSlotAnimationProfile({ quickSpin, reducedMotion });
 
   useEffect(() => {
     if (!spinning) { setSettled(true); return undefined; }
@@ -119,7 +124,7 @@ export default function SlotReelBoard({ grid, wins = [], spinning = false, sound
 
   if (!normalized) return (
     <div className="relative flex aspect-[16/8] min-h-[280px] w-full max-w-6xl items-center justify-center overflow-hidden rounded-[32px] border border-white/10 bg-[#070b15]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(99,102,241,.2),transparent_30%),radial-gradient(circle_at_20%_80%,rgba(245,158,11,.13),transparent_32%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(99,102,241,.2),transparent_30%),radial-gradient(circle_at_20%_80%,rgba(245,158,11,.13),transparent 32%)]" />
       <div className="relative text-center text-slate-400"><div className="mx-auto mb-4 flex h-14 w-14 animate-pulse items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-300/10 text-2xl">✦</div><div className="font-black tracking-wide">PREPARING GAME</div><div className="mt-2 text-xs text-slate-500">Waiting for the authoritative Slotopol game state</div></div>
     </div>
   );
@@ -129,7 +134,7 @@ export default function SlotReelBoard({ grid, wins = [], spinning = false, sound
   const winning = getWinningKeys(wins, colCount, rowCount);
   const cells = [];
   normalized.rows.forEach((row, r) => row.forEach((value, c) => cells.push({ value, r, c })));
-  const duration = quickSpin ? 0.18 : 0.68;
+  const duration = animation.reelDuration / 1000;
   const title = gameName || 'N999BET ORIGINAL GAME';
   const list = Array.isArray(wins) ? wins : (wins && typeof wins === 'object' ? Object.values(wins) : []);
   const hasCascade = list.some((w) => Boolean(w?.cascade || w?.cascadeIndex || w?.tumble || w?.multiplier));
@@ -147,11 +152,11 @@ export default function SlotReelBoard({ grid, wins = [], spinning = false, sound
             const isWin = winning.has(key);
             const kind = symbolKind(value);
             return (
-              <motion.div key={`${phase}-${key}`} initial={{ y: spinning ? -300 - c * 55 : 0, opacity: spinning ? 0.08 : 1, scaleY: spinning ? 1.45 : 1 }} animate={{ y: 0, opacity: 1, scaleY: 1, scale: isWin && settled ? 1.045 : 1 }} transition={{ duration, delay: spinning ? c * (quickSpin ? .025 : .11) : 0, ease: [0.16, 1, 0.3, 1] }} onAnimationComplete={() => { if (sound && spinning && r === rowCount - 1) { slotAudio.reelStop(c); if (c === colCount - 1) setSettled(true); } }} className={`slot-runtime-cell relative flex aspect-square min-h-[58px] items-center justify-center overflow-hidden rounded-2xl border select-none sm:min-h-[84px] md:min-h-[112px] ${isWin && settled ? 'border-amber-300/90 shadow-[0_0_35px_rgba(251,191,36,.4)]' : 'border-white/10'} ${kind === 'wild' ? 'bg-fuchsia-950/80' : kind === 'scatter' ? 'bg-amber-950/80' : kind === 'bonus' ? 'bg-emerald-950/80' : kind === 'free' ? 'bg-cyan-950/80' : ''}`}>
+              <motion.div key={`${phase}-${key}`} initial={{ y: spinning ? -300 - c * 55 : 0, opacity: spinning ? 0.08 : 1, scaleY: spinning ? 1.45 : 1 }} animate={{ y: 0, opacity: 1, scaleY: 1, scale: isWin && settled ? 1.045 : 1 }} transition={{ duration, delay: spinning ? c * (animation.stagger / 1000) : 0, ease: [0.16, 1, 0.3, 1] }} onAnimationComplete={() => { if (sound && spinning && r === rowCount - 1) { slotAudio.reelStop(c); if (c === colCount - 1) setSettled(true); } }} className={`slot-runtime-cell relative flex aspect-square min-h-[58px] items-center justify-center overflow-hidden rounded-2xl border select-none sm:min-h-[84px] md:min-h-[112px] ${isWin && settled ? 'border-amber-300/90 shadow-[0_0_35px_rgba(251,191,36,.4)]' : 'border-white/10'} ${kind === 'wild' ? 'bg-fuchsia-950/80' : kind === 'scatter' ? 'bg-amber-950/80' : kind === 'bonus' ? 'bg-emerald-950/80' : kind === 'free' ? 'bg-cyan-950/80' : ''}`}>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(255,255,255,.16),transparent_42%)]" />
-                {spinning && <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent slot-shimmer" />}
+                {spinning && !reducedMotion && <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent slot-shimmer" />}
                 <SymbolArt value={value} provider={provider} gameName={gameName} spinning={spinning} />
-                {isWin && settled && <motion.span initial={{ opacity: 0, scale: .7 }} animate={{ opacity: [0, 1, .2], scale: [.75, 1.12, 1.35] }} transition={{ duration: .9, repeat: Infinity, repeatDelay: .35 }} className="pointer-events-none absolute inset-1 rounded-2xl border-2 border-amber-300" />}
+                {isWin && settled && <motion.span initial={{ opacity: 0, scale: .7 }} animate={{ opacity: [0, 1, .2], scale: [.75, 1.12, 1.35] }} transition={{ duration: animation.winPulse / 1000, repeat: Infinity, repeatDelay: .35 }} className="pointer-events-none absolute inset-1 rounded-2xl border-2 border-amber-300" />}
               </motion.div>
             );
           })}
