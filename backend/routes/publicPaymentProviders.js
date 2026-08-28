@@ -16,27 +16,59 @@ async function initTable() {
   )`);
 }
 
+function parseConfig(value) {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function publicConfig(config) {
+  const safe = {};
+  for (const key of [
+    'accountName',
+    'accountNumber',
+    'phoneNumber',
+    'qrCodeUrl',
+    'address',
+    'network',
+    'instructions',
+    'logoUrl'
+  ]) {
+    if (config[key] !== undefined && config[key] !== null) safe[key] = config[key];
+  }
+  return safe;
+}
+
 // Public/player-safe view: never expose private provider configuration.
 router.get('/', async (req, res, next) => {
   try {
     await initTable();
     const [rows] = await pool.query(
-      'SELECT id, code, type, name, currency, config, enabled FROM payment_providers WHERE enabled=1 ORDER BY id DESC'
+      'SELECT id, code, type, name, currency, config FROM payment_providers WHERE enabled=1 ORDER BY id DESC'
     );
-    const providers = rows.map(row => {
-      let config = row.config;
-      if (typeof config === 'string') {
-        try { config = JSON.parse(config || '{}'); } catch { config = {}; }
-      }
-      config = config && typeof config === 'object' ? config : {};
-      const safeConfig = {};
-      for (const key of ['accountName','accountNumber','phoneNumber','qrCodeUrl','address','network','instructions','logoUrl']) {
-        if (config[key] !== undefined && config[key] !== null) safeConfig[key] = config[key];
-      }
-      return { id: row.id, code: row.code, type: row.type, name: row.name, currency: row.currency, config: safeConfig, enabled: true };
-    });
+
+    const providers = rows.map(row => ({
+      id: row.id,
+      code: row.code,
+      type: row.type,
+      name: row.name,
+      currency: row.currency,
+      config: publicConfig(parseConfig(row.config)),
+      enabled: true
+    }));
+
     res.json({ success: true, providers });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
