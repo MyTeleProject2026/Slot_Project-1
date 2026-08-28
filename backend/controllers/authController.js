@@ -49,13 +49,10 @@ function getAdminFromEnv(username, password) {
     const envUser = firstEnv(config.username);
     const envPass = firstEnv(config.password);
     if (!envUser || !envPass || envUser.toLowerCase() !== normalizedUsername) continue;
-
-    // Permit either a normal Render secret or a bcrypt password hash.
     const passwordMatches = envPass.startsWith('$2a$') || envPass.startsWith('$2b$') || envPass.startsWith('$2y$')
       ? bcrypt.compareSync(suppliedPassword, envPass)
       : suppliedPassword === envPass;
     if (!passwordMatches) return null;
-
     return {
       id: config.id,
       username: envUser,
@@ -103,15 +100,29 @@ function normalizePhone(phone) {
 
 exports.register = async (req, res) => {
   try {
-    const { username, password, fullName } = req.body;
+    const username = String(req.body.username || '').trim();
     const phone = normalizePhone(req.body.phone);
+    const password = String(req.body.password || '');
+    const confirmPassword = String(req.body.confirmPassword || '');
+
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+      return res.status(400).json({ success: false, error: 'Username must be 3-20 letters, numbers, or underscores' });
+    }
     if (!phone) return res.status(400).json({ success: false, error: 'Phone number is required' });
+    if (!/^(?:\+?95|0)?9\d{7,9}$/.test(phone)) return res.status(400).json({ success: false, error: 'Invalid Myanmar phone number' });
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters and contain uppercase, lowercase, and a number' });
+    }
+    if (!confirmPassword) return res.status(400).json({ success: false, error: 'Password confirmation is required' });
+    if (password !== confirmPassword) return res.status(400).json({ success: false, error: 'Passwords do not match' });
+
     const existingUsername = await User.findByUsername(username);
     if (existingUsername) return res.status(400).json({ success: false, error: 'Username taken' });
     const existingPhone = await User.findByPhone(phone);
     if (existingPhone) return res.status(400).json({ success: false, error: 'Phone number already registered' });
-    const hashed = await bcrypt.hash(password, 10);
-    const userId = await User.create({ username, email: null, password: hashed, fullName, phone });
+
+    const hashed = await bcrypt.hash(password, 12);
+    const userId = await User.create({ username, email: null, password: hashed, fullName: username, phone });
     await Wallet.create(userId);
     const user = await User.findById(userId);
     const token = generateToken(userId, ROLES.USER);
@@ -128,7 +139,6 @@ exports.login = async (req, res) => {
     const identifier = String(req.body.identifier ?? req.body.username ?? '').trim();
     const { password } = req.body;
     if (!identifier) return res.status(400).json({ success: false, error: 'Phone number or username is required' });
-
     const adminUser = getAdminFromEnv(identifier, password);
     if (adminUser) {
       await AdminBalance.ensure(adminUser.id, adminUser.role);
@@ -136,7 +146,6 @@ exports.login = async (req, res) => {
       const refreshToken = generateRefreshToken(adminUser.id);
       return res.json({ success: true, token, refreshToken, user: adminUser, wallet: await getAdminWallet(adminUser) });
     }
-
     const normalizedPhone = normalizePhone(identifier);
     let user = await User.findByPhone(normalizedPhone);
     if (!user) user = await User.findByUsername(identifier);

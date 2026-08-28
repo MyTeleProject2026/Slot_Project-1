@@ -7,8 +7,9 @@ import { useAuth } from '../hooks/useAuth';
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const [form, setForm] = useState({ username: '', password: '', fullName: '', phone: '' });
+  const [form, setForm] = useState({ username: '', phone: '', password: '', confirmPassword: '' });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -21,15 +22,19 @@ const Register = () => {
 
   const validate = () => {
     const next = {};
-    if (!form.username.trim()) next.username = 'Username is required';
-    else if (form.username.length < 3 || form.username.length > 20) next.username = 'Username must be 3-20 characters';
-    if (!form.phone.trim()) next.phone = 'Phone number is required';
+    const username = form.username.trim();
+    const phone = form.phone.trim();
+    if (!username) next.username = 'Username is required';
+    else if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) next.username = 'Username must be 3-20 letters, numbers, or underscores';
+    if (!phone) next.phone = 'Phone number is required';
+    else if (!/^(?:\+?95|0)?9\d{7,9}$/.test(phone.replace(/[\s()-]/g, ''))) next.phone = 'Enter a valid Myanmar phone number';
     if (!form.password) next.password = 'Password is required';
     else if (form.password.length < 8) next.password = 'Minimum 8 characters';
     else if (!/[A-Z]/.test(form.password)) next.password = 'Must contain an uppercase letter';
     else if (!/[a-z]/.test(form.password)) next.password = 'Must contain a lowercase letter';
     else if (!/\d/.test(form.password)) next.password = 'Must contain a number';
-    if (!form.fullName.trim()) next.fullName = 'Full name is required';
+    if (!form.confirmPassword) next.confirmPassword = 'Please confirm your password';
+    else if (form.password !== form.confirmPassword) next.confirmPassword = 'Passwords do not match';
     if (!agreeTerms) next.agreeTerms = 'You must agree to the terms';
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -40,7 +45,7 @@ const Register = () => {
     if (!validate()) return;
     setLoading(true);
     try {
-      await register(form);
+      await register({ username: form.username.trim(), phone: form.phone.trim(), password: form.password, confirmPassword: form.confirmPassword });
       navigate('/');
     } catch (error) {
       console.error('Registration error:', error);
@@ -80,21 +85,27 @@ const Register = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name</label>
-            <input type="text" name="fullName" value={form.fullName} onChange={handleChange} placeholder="Your full name" autoComplete="name" className={`w-full px-4 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${errors.fullName ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'}`} />
-            {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
             <div className="relative">
               <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
               <input type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={handleChange} placeholder="Create a password" autoComplete="new-password" className={`w-full pl-10 pr-12 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${errors.password ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'}`} />
-              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+              <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white" aria-label={showPassword ? 'Hide password' : 'Show password'}>
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
             {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Confirm Password</label>
+            <div className="relative">
+              <FaLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={form.confirmPassword} onChange={handleChange} placeholder="Enter your password again" autoComplete="new-password" className={`w-full pl-10 pr-12 py-3 bg-dark-700/80 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all ${errors.confirmPassword ? 'border-red-500 focus:ring-red-500/20' : 'border-dark-600 focus:ring-primary-500/20 focus:border-primary-500'}`} />
+              <button type="button" onClick={() => setShowConfirmPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white" aria-label={showConfirmPassword ? 'Hide confirmed password' : 'Show confirmed password'}>
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
           </div>
 
           <div className="flex items-start gap-2">
