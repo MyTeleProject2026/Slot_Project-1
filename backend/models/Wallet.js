@@ -19,6 +19,18 @@ class Wallet {
     return result.affectedRows > 0;
   }
 
+  // Atomically debit the main wallet. This prevents concurrent game requests
+  // from both observing the same balance and overspending the player wallet.
+  static async debitMainBalance(userId, amount) {
+    const debitAmount = Number(amount);
+    if (!Number.isFinite(debitAmount) || debitAmount <= 0) return false;
+    const [result] = await pool.query(
+      'UPDATE wallets SET main_balance = main_balance - ? WHERE user_id = ? AND main_balance >= ?',
+      [debitAmount, userId, debitAmount]
+    );
+    return result.affectedRows > 0;
+  }
+
   static async getBalance(userId) {
     const [rows] = await pool.query(
       `SELECT main_balance, bonus_balance, commission_balance, locked_balance,
@@ -80,7 +92,7 @@ class Wallet {
     const [result] = await pool.query(
       `UPDATE wallets SET main_balance = main_balance + ?, locked_balance = locked_balance - ? 
        WHERE user_id = ? AND locked_balance >= ?`,
-      [amount, amount, userId, amount]
+      [amount, amount, userId, userId, amount]
     );
     return result.affectedRows > 0;
   }
