@@ -7,5 +7,6 @@ const { ROLES } = require('../config/roles');
 router.post('/receive', controller.receiveFunding);
 router.get('/history', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), controller.getFundingHistory);
 router.get('/balance', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), controller.getMasterBalance);
+router.get('/overview', authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.MAIN_ADMIN), controller.getFundingOverview);
 
 module.exports = router;
