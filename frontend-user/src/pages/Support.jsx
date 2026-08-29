@@ -12,22 +12,12 @@ const Support = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Mock messages - replace with actual API/Socket connection
-    if (isAuthenticated) {
-      setMessages([
-        {
-          id: 1,
-          text: 'Welcome to support! How can we help you today?',
-          isAdmin: true,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-      setIsConnected(true);
-    }
+    // Live support transport is intentionally not simulated. Messages remain empty until a real server endpoint/socket is configured.
+    setMessages([]);
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -40,29 +30,7 @@ const Support = () => {
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
-
-    const newMessage = {
-      id: Date.now(),
-      text: inputMessage.trim(),
-      isAdmin: false,
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setInputMessage('');
-
-    // Mock auto-reply - replace with actual API
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          text: 'Thank you for your message. Our team will get back to you shortly.',
-          isAdmin: true,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    }, 1500);
+    // Do not fabricate delivery or staff replies. A real support API/socket must acknowledge the message.
   };
 
   const handleKeyPress = (e) => {
@@ -166,12 +134,13 @@ const Support = () => {
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim()}
+              disabled={!inputMessage.trim() || !isConnected}
               className="p-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-xl font-semibold hover:shadow-lg hover:shadow-primary-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               <FaPaperPlane className="text-sm" />
             </button>
           </div>
+          {!isConnected && <p className="px-4 pb-4 text-center text-xs text-amber-300">Live support is currently unavailable. No messages are simulated as sent or answered.</p>}
         </div>
       </motion.div>
     </div>
