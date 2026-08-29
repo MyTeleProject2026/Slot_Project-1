@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaWallet, FaArrowDown, FaArrowUp, FaHistory, FaPlus, FaMinus, FaCopy, FaCheck } from 'react-icons/fa';
 import { motion } from 'framer-motion';
@@ -9,10 +9,15 @@ import { useCountry } from '../contexts/CountryContext';
 
 const Wallet = () => {
   const { currency, symbol } = useCountry();
-  const { balance, transactions, loading, bankAccounts } = useWallet();
+  const { balance, transactions, loading, bankAccounts, fetchBalance, fetchTransactions, fetchBankAccounts } = useWallet();
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('balance');
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshWallet = async () => { if (!isAuthenticated || refreshing) return; setRefreshing(true); try { await Promise.all([fetchBalance(), fetchTransactions(), fetchBankAccounts()]); } finally { setRefreshing(false); } };
+
+  useEffect(() => { if (isAuthenticated) refreshWallet(); }, [isAuthenticated]);
 
   const copyAddress = (text) => {
     navigator.clipboard.writeText(text);
@@ -46,7 +51,7 @@ const Wallet = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-4 md:mb-6">My Wallet</h1>
+        <div className="mb-4 md:mb-6 flex items-center justify-between gap-3"><h1 className="text-2xl md:text-3xl font-bold gradient-text">My Wallet</h1><button onClick={refreshWallet} disabled={refreshing} className="rounded-xl border border-dark-700/50 bg-dark-800/70 px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white disabled:opacity-50">{refreshing ? 'Refreshing…' : 'Refresh'}</button></div>
 
         {/* Total Balance */}
         <div className="bg-gradient-to-r from-primary-500/10 to-orange-500/10 rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border border-primary-500/20 backdrop-blur-sm">
