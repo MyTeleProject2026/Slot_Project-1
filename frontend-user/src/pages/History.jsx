@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
@@ -10,6 +11,7 @@ const History = () => {
   const { isAuthenticated } = useAuth();
   const { transactions, loading, fetchTransactions } = useWallet();
   const [activeTab, setActiveTab] = useState('transactions');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -31,7 +33,9 @@ const History = () => {
     );
   }
 
-  if (loading) return <LoadingSpinner />;
+  const refresh = async () => { setRefreshing(true); try { await fetchTransactions(); } finally { setRefreshing(false); } };
+
+  if (loading && transactions.length === 0) return <LoadingSpinner />;
 
   return (
     <div className="w-full">
@@ -41,6 +45,8 @@ const History = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-2xl md:text-3xl font-bold gradient-text mb-4 md:mb-6">{t('history.title')}</h1>
+
+        <div className="flex items-center justify-between gap-3 mb-4"><span className="text-sm text-gray-400">{transactions.length} records</span><button onClick={refresh} disabled={refreshing} className="rounded-lg border border-dark-700/50 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white disabled:opacity-50">{refreshing ? 'Refreshing…' : 'Refresh'}</button></div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto">
