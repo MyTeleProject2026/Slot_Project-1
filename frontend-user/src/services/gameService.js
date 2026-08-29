@@ -1,6 +1,7 @@
 import api from './api';
 
 const cache = new Map();
+const inFlight = new Map();
 const CACHE_DURATION = 60000;
 const getCacheKey = (endpoint, params = {}) => `${endpoint}:${JSON.stringify(params)}`;
 const getCachedData = (key) => {
@@ -8,7 +9,8 @@ const getCachedData = (key) => {
   return cached && Date.now() - cached.timestamp < CACHE_DURATION ? cached.data : null;
 };
 const setCachedData = (key, data) => cache.set(key, { data, timestamp: Date.now() });
-export const clearCache = () => cache.clear();
+const coalesce = (key, request) => { const active = inFlight.get(key); if (active) return active; const promise = Promise.resolve().then(request).finally(() => inFlight.delete(key)); inFlight.set(key, promise); return promise; };
+export const clearCache = () => { cache.clear(); inFlight.clear(); };
 
 const normalizeCapabilities = (payload) => {
   const root = payload?.game || payload?.data?.game || payload || {};
@@ -18,9 +20,9 @@ const normalizeCapabilities = (payload) => {
 };
 
 export const gameService = {
-  getGames: async (params = {}) => { const key = getCacheKey('/games/available', params); const cached = getCachedData(key); if (cached) return cached; try { const response = await api.get('/games/available', { params }); setCachedData(key, response.data); return response.data; } catch (error) { const stale = cache.get(key); if (stale) return stale.data; throw error; } },
+  getGames: async (params = {}) => { const key = getCacheKey('/games/available', params); const cached = getCachedData(key); if (cached) return cached; try { return await coalesce(key, async () => { const response = await api.get('/games/available', { params }); setCachedData(key, response.data); return response.data; }); } catch (error) { const stale = cache.get(key); if (stale) return stale.data; throw error; } },
   getGameById: async (id) => { if (!id) throw new Error('Game ID is required'); return (await api.get(`/games/${encodeURIComponent(id)}`)).data; },
-  getGameCapabilities: async (id) => { if (!id) throw new Error('Game ID is required'); const key = getCacheKey('/games/capabilities', { id }); const cached = getCachedData(key); if (cached) return cached; try { const data = normalizeCapabilities((await api.get(`/games/capabilities/${encodeURIComponent(id)}`)).data); setCachedData(key, data); return data; } catch (error) { const stale = cache.get(key); if (stale) return stale.data; throw error; } },
+  getGameCapabilities: async (id) => { if (!id) throw new Error('Game ID is required'); const key = getCacheKey('/games/capabilities', { id }); const cached = getCachedData(key); if (cached) return cached; try { return await coalesce(key, async () => { const data = normalizeCapabilities((await api.get(`/games/capabilities/${encodeURIComponent(id)}`)).data); setCachedData(key, data); return data; }); } catch (error) { const stale = cache.get(key); if (stale) return stale.data; throw error; } },
   getProviders: async () => (await api.get('/games/providers')).data,
   searchGames: async (query) => gameService.getGames(query?.trim() ? { search: query.trim() } : {}),
   getGamesByProvider: async (provider) => gameService.getGames(provider ? { provider } : {}),
