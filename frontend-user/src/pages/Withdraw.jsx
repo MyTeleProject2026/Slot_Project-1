@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaWallet, FaUniversity, FaCheck, FaTimes } from 'react-icons/fa';
 import { motion } from 'framer-motion';
@@ -11,11 +11,12 @@ const Withdraw = () => {
   const { currency } = useCountry();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { requestWithdraw, bankAccounts, balance } = useWallet();
+  const { requestWithdraw, bankAccounts, balance, fetchBankAccounts, loading: walletLoading } = useWallet();
   const [amount, setAmount] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState(false);
+  useEffect(() => { if (isAuthenticated) fetchBankAccounts(); }, [isAuthenticated]);
   const quickAmounts = [5000, 10000, 25000, 50000, 100000, 200000];
 
   const handleSubmit = async (e) => {
@@ -44,8 +45,8 @@ const Withdraw = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div><label className="block text-gray-300 text-sm font-medium mb-2">Amount ({currency})</label><input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter amount" className="w-full px-4 py-3 bg-dark-800/80 backdrop-blur-sm border border-dark-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all" min="5000" step="1" /></div>
         <div><label className="block text-gray-300 text-sm font-medium mb-2">Quick Select</label><div className="flex flex-wrap gap-2">{quickAmounts.map(val => <button key={val} type="button" onClick={() => setAmount(val.toString())} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${parseFloat(amount) === val ? 'bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 shadow-lg shadow-primary-500/25' : 'bg-dark-800/80 backdrop-blur-sm text-gray-300 hover:bg-dark-700/80 border border-dark-700/30'}`}>{val.toLocaleString()}</button>)}</div></div>
-        {bankAccounts.length > 0 ? <div><label className="block text-gray-300 text-sm font-medium mb-2">Select Bank Account</label><select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)} className="w-full px-4 py-3 bg-dark-800/80 backdrop-blur-sm border border-dark-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"><option value="">Select account</option>{bankAccounts.map(bank => <option key={bank.id} value={bank.id}>{bank.bank_name} - {bank.account_number}</option>)}</select></div> : <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 text-center border border-dark-700/30"><FaUniversity className="text-4xl text-gray-600 mx-auto mb-2" /><p className="text-gray-400 text-sm">No bank accounts added</p><button type="button" onClick={() => navigate('/wallet/banks')} className="mt-2 text-primary-500 text-sm hover:text-primary-400 transition">+ Add Bank Account</button></div>}
-        <button type="submit" disabled={loading || bankAccounts.length === 0} className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2">{loading ? <><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Processing...</> : <><FaWallet /> Submit Withdrawal</>}</button>
+        {walletLoading && bankAccounts.length === 0 ? <div className="rounded-xl bg-dark-800/80 p-6 text-center text-sm text-gray-400 border border-dark-700/30">Loading withdrawal accounts…</div> : bankAccounts.length > 0 ? <div><label className="block text-gray-300 text-sm font-medium mb-2">Select Bank Account</label><select value={selectedBank} onChange={(e) => setSelectedBank(e.target.value)} className="w-full px-4 py-3 bg-dark-800/80 backdrop-blur-sm border border-dark-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"><option value="">Select account</option>{bankAccounts.map(bank => <option key={bank.id} value={bank.id}>{bank.bank_name} - {bank.account_number}</option>)}</select></div> : <div className="bg-dark-800/80 backdrop-blur-sm rounded-xl p-6 text-center border border-dark-700/30"><FaUniversity className="text-4xl text-gray-600 mx-auto mb-2" /><p className="text-gray-400 text-sm">No bank accounts added</p><button type="button" onClick={() => navigate('/wallet/banks')} className="mt-2 text-primary-500 text-sm hover:text-primary-400 transition">+ Add Bank Account</button></div>}
+        <button type="submit" disabled={loading || walletLoading || bankAccounts.length === 0} className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-red-500/25 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2">{loading ? <><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Processing...</> : <><FaWallet /> Submit Withdrawal</>}</button>
         <div className="text-center text-xs text-gray-500 space-y-1"><p>⚠️ Withdrawals are processed within 24 hours</p><p>Minimum withdrawal: 5000 {currency}</p><p>💳 Funds will be sent to your selected bank account</p></div>
       </form>
     </motion.div>
