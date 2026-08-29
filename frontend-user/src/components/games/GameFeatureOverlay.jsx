@@ -9,6 +9,7 @@ export default function GameFeatureOverlay({
   onContinue,
   onCollect,
   onDoubleUp,
+  onClose,
   busy = false,
 }) {
   const fs = number(result.fs ?? result.freeSpins ?? result.free_spins);
@@ -18,6 +19,7 @@ export default function GameFeatureOverlay({
   const bonus = Boolean(result.bonus ?? result.bonusTriggered ?? result.feature);
   const doubleAvailable = Boolean(result.doubleUpAvailable ?? result.doubleup ?? gain > 0);
   const canContinue = fs > 0 && typeof onContinue === 'function';
+  const canClose = !canContinue && typeof onClose === 'function';
 
   useEffect(() => {
     if (fs > 0) slotAudio.freeSpins();
@@ -42,6 +44,7 @@ export default function GameFeatureOverlay({
             {gain > 0 && typeof onCollect === 'function' && <button disabled={busy} onClick={onCollect} className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50">{busy ? 'WORKING…' : 'COLLECT'}</button>}
             {gain > 0 && doubleAvailable && typeof onDoubleUp === 'function' && <button disabled={busy} onClick={onDoubleUp} className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-500/15 px-4 py-3 text-sm font-black text-fuchsia-100 disabled:opacity-50">DOUBLE UP ×2</button>}
             {canContinue && <button disabled={busy} onClick={onContinue} className="rounded-2xl bg-indigo-500 px-4 py-3 text-sm font-black text-white disabled:opacity-50 sm:col-span-2">{busy ? 'WORKING…' : 'CONTINUE'}</button>}
+            {canClose && <button disabled={busy} onClick={onClose} className="rounded-2xl border border-white/15 bg-white/[.06] px-4 py-3 text-sm font-black text-white disabled:opacity-50 sm:col-span-2">CLOSE</button>}
           </div>
         </div>
       </motion.div>
