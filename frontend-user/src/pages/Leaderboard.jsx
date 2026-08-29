@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useCountry } from '../contexts/CountryContext';
 import { motion } from 'framer-motion';
 import { FaTrophy, FaMedal } from 'react-icons/fa';
@@ -8,22 +8,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 const Leaderboard = () => {
   const { currency } = useCountry();
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(true);
-  const [players, setPlayers] = useState([]);
-
-  useEffect(() => {
-    // Mock data - replace with API call
-    setTimeout(() => {
-      setPlayers([
-        { rank: 1, name: 'Player1', score: 12500, reward: `5,000 ${currency}` },
-        { rank: 2, name: 'Player2', score: 9800, reward: `3,000 ${currency}` },
-        { rank: 3, name: 'Player3', score: 8700, reward: `2,000 ${currency}` },
-        { rank: 4, name: 'Player4', score: 7600, reward: `1,000 ${currency}` },
-        { rank: 5, name: 'Player5', score: 6500, reward: `500 ${currency}` },
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  const players = [];
+  const leaderboardAvailable = false;
 
   const getRankIcon = (rank) => {
     if (rank === 1) return <FaTrophy className="text-yellow-500" />;
@@ -39,8 +25,6 @@ const Leaderboard = () => {
     return 'bg-dark-800/50 border-dark-700/30';
   };
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div className="w-full">
       <motion.div
@@ -54,7 +38,7 @@ const Leaderboard = () => {
         </div>
         <p className="text-gray-400 mb-4 md:mb-6">{t('leaderboard.subtitle')}</p>
 
-        <div className="space-y-3">
+        {!leaderboardAvailable ? <div className="rounded-2xl border border-dark-700/40 bg-dark-800/70 p-8 text-center text-gray-400">The live leaderboard is not available until the server leaderboard endpoint is enabled. No demo rankings are shown.</div> : <div className="space-y-3">
           {players.map((player) => (
             <motion.div
               key={player.rank}
@@ -75,7 +59,7 @@ const Leaderboard = () => {
               </div>
             </motion.div>
           ))}
-        </div>
+        </div>}
       </motion.div>
     </div>
   );
