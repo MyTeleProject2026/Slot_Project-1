@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useCountry } from '../contexts/CountryContext';
 import { motion } from 'framer-motion';
 import { FaCopy, FaCheck, FaShare, FaUsers } from 'react-icons/fa';
@@ -13,6 +14,7 @@ const Referral = () => {
   const { user, isAuthenticated } = useAuth();
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [referralData, setReferralData] = useState({
     totalReferrals: 0,
     earned: 0,
@@ -28,6 +30,15 @@ const Referral = () => {
       });
     }
   }, [isAuthenticated, user]);
+
+  const handleShare = async () => {
+    if (!referralData.referralLink || sharing) return;
+    setSharing(true);
+    try {
+      if (navigator.share) await navigator.share({ title: 'Join N999Bet Clubs', url: referralData.referralLink });
+      else await handleCopy();
+    } finally { setSharing(false); }
+  };
 
   const handleCopy = async () => {
     const success = await copyToClipboard(referralData.referralLink);
@@ -100,7 +111,7 @@ const Referral = () => {
         </div>
 
         {/* Share Button */}
-        <button className="mt-4 w-full py-3 bg-dark-800/80 backdrop-blur-sm border border-dark-700/30 rounded-xl text-white hover:bg-dark-700/80 transition-all flex items-center justify-center gap-2">
+        <button onClick={handleShare} disabled={!referralData.referralLink || sharing} className="mt-4 w-full py-3 disabled:opacity-50 bg-dark-800/80 backdrop-blur-sm border border-dark-700/30 rounded-xl text-white hover:bg-dark-700/80 transition-all flex items-center justify-center gap-2">
           <FaShare /> {t('referral.share')}
         </button>
 
