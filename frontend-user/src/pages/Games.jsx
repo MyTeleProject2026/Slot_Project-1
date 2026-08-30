@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useGames } from '../hooks/useGames';
 import GameCard from '../components/games/GameCard';
@@ -16,6 +16,7 @@ const Games = () => {
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const searchTimerRef = useRef(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -31,12 +32,15 @@ const Games = () => {
 
   const handleSearch = (query) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      searchGames(query);
-    } else {
-      fetchGames();
-    }
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      const search = query.trim();
+      if (search) searchGames(search);
+      else fetchGames({ category: selectedCategory || undefined, provider: selectedProvider || undefined });
+    }, 250);
   };
+
+  useEffect(() => () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); }, []);
 
   const handleFilter = (type, value) => {
     if (type === 'category') {
