@@ -10,8 +10,7 @@ const Lotto = () => {
   const { games, loading, fetchGames, error } = useGames();
 
   useEffect(() => {
-    // ✅ Fetch all games (since all are slots)
-    fetchGames();
+    fetchGames({ category: 'undefined' });
   }, []);
 
   if (loading) return <LoadingSpinner />;
@@ -20,7 +19,7 @@ const Lotto = () => {
       <div className="container mx-auto px-4 py-12 text-center">
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 max-w-md mx-auto">
           <p className="text-red-400">{error}</p>
-          <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-400 transition">
+          <button onClick={() => fetchGames({ category: 'undefined' })} className="mt-4 px-6 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-400 transition">
             Retry
           </button>
         </div>
