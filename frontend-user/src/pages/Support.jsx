@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FaHeadset, FaPaperPlane, FaUserCircle } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../hooks/useAuth';
+import { api } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { Link } from 'react-router-dom';
 
@@ -12,12 +13,33 @@ const Support = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isConnected] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Live support transport is intentionally not simulated. Messages remain empty until a real server endpoint/socket is configured.
-    setMessages([]);
+    let active = true;
+    const loadMessages = async () => {
+      if (!isAuthenticated) { if (active) { setMessages([]); setIsConnected(false); } return; }
+      setLoading(true); setError('');
+      try {
+        const response = await api.get('/chat/messages');
+        if (!active) return;
+        const list = response.data?.messages || [];
+        setMessages(list.slice().reverse().map((msg) => ({
+          id: msg.id,
+          text: msg.message,
+          timestamp: msg.created_at,
+          isAdmin: !Boolean(msg.is_from_user)
+        })));
+        setIsConnected(true);
+      } catch (err) {
+        if (active) { setError(err.response?.data?.error || 'Unable to load support messages'); setIsConnected(false); }
+      } finally { if (active) setLoading(false); }
+    };
+    loadMessages();
+    return () => { active = false; };
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -28,9 +50,21 @@ const Support = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
-    // Do not fabricate delivery or staff replies. A real support API/socket must acknowledge the message.
+  const handleSendMessage = async () => {
+    const message = inputMessage.trim();
+    if (!message || sending) return;
+    setSending(true); setError('');
+    try {
+      const response = await api.post('/chat/send', { message });
+      const msg = response.data?.message;
+      if (!msg) throw new Error('Invalid message response');
+      setMessages(prev => [...prev, { id: msg.id, text: msg.message, timestamp: msg.created_at, isAdmin: !Boolean(msg.is_from_user) }]);
+      setInputMessage('');
+      setIsConnected(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to send support message');
+      setIsConnected(false);
+    } finally { setSending(false); }
   };
 
   const handleKeyPress = (e) => {
@@ -55,7 +89,7 @@ const Support = () => {
     );
   }
 
-  if (loading) return <LoadingSpinner />;
+  if (loading && messages.length === 0) return <LoadingSpinner />;
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -77,6 +111,8 @@ const Support = () => {
             </div>
           </div>
         </div>
+
+        {error && <div className="mx-4 mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</div>}
 
         {/* Messages */}
         <div className="h-[400px] overflow-y-auto p-4 space-y-3">
@@ -134,13 +170,13 @@ const Support = () => {
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || !isConnected}
+              disabled={!inputMessage.trim() || sending}
               className="p-3 bg-gradient-to-r from-primary-500 to-orange-500 text-dark-900 rounded-xl font-semibold hover:shadow-lg hover:shadow-primary-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              <FaPaperPlane className="text-sm" />
+              {sending ? <span className="text-xs">Sending…</span> : <FaPaperPlane className="text-sm" />}
             </button>
           </div>
-          {!isConnected && <p className="px-4 pb-4 text-center text-xs text-amber-300">Live support is currently unavailable. No messages are simulated as sent or answered.</p>}
+          {!isConnected && <p className="px-4 pb-4 text-center text-xs text-amber-300">Support service is temporarily unavailable. Please try again.</p>}
         </div>
       </motion.div>
     </div>
